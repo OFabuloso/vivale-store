@@ -5,7 +5,7 @@
   'use strict';
 
   const { armazenamento, utilidades, componentes, telaCarrinho } = raiz.Loja;
-  const { formatarMoeda, escaparHtml, obterHexDaCor } = utilidades;
+  const { formatarMoeda, escaparHtml, obterFundoDaCor } = utilidades;
 
   // Ordem de exibição dos tamanhos nos filtros
   const ORDEM_TAMANHOS = ['PP', 'P', 'M', 'G', 'GG', 'XG', 'U'];
@@ -93,7 +93,7 @@
   function montarChip(tipoFiltro, valor, rotulo, comBolinhaDeCor) {
     const selecionado = filtrosAtivos[tipoFiltro] === valor;
     const bolinha = comBolinhaDeCor
-      ? `<span class="bolinha-cor" style="background:${obterHexDaCor(valor)}"></span>`
+      ? `<span class="bolinha-cor" style="background:${obterFundoDaCor(valor)}"></span>`
       : '';
     const valorAtributo = valor === null ? '' : escaparHtml(valor);
     return `<button type="button" class="chip" data-filtro="${tipoFiltro}" data-valor="${valorAtributo}" aria-pressed="${selecionado}">${bolinha}${escaparHtml(rotulo)}</button>`;
@@ -163,7 +163,7 @@
     const bolinhas = produto.cores
       .map(
         (cor) =>
-          `<span class="bolinha-cor" title="${escaparHtml(cor)}" style="background:${obterHexDaCor(cor)}"></span>`,
+          `<span class="bolinha-cor" title="${escaparHtml(cor)}" style="background:${obterFundoDaCor(cor)}"></span>`,
       )
       .join('');
     return `
@@ -224,7 +224,7 @@
       .map(
         (opcao) =>
           `<button type="button" class="opcao opcao-cor" data-valor="${escaparHtml(opcao)}" aria-pressed="${opcao === cor}">` +
-          `<span class="bolinha-cor" style="background:${obterHexDaCor(opcao)}"></span>${escaparHtml(opcao)}</button>`,
+          `<span class="bolinha-cor" style="background:${obterFundoDaCor(opcao)}"></span>${escaparHtml(opcao)}</button>`,
       )
       .join('');
 

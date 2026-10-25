@@ -2,28 +2,36 @@
    Vivale Store — estilos (mobile-first)
    ========================================================= */
 
+/* Tema "dark luxe": preto, branco-marfim e dourado */
 :root {
-  --cor-fundo: #fbf8f5;
-  --cor-superficie: #ffffff;
-  --cor-texto: #2b2420;
-  --cor-texto-suave: #8a7f78;
-  --cor-borda: #ece4dc;
-  --cor-destaque: #b9806b;
-  --cor-destaque-escuro: #9a6552;
-  --cor-destaque-claro: #f5e9e3;
-  --cor-sucesso: #2f7d5b;
+  color-scheme: dark;
+
+  --cor-fundo: #0b0b0c;
+  --cor-superficie: #141416;
+  --cor-superficie-elevada: #1c1c1f;
+  --cor-campo: #101012;
+  --cor-texto: #f5f1e8;
+  --cor-texto-suave: #a39e94;
+  --cor-borda: #2c2924;
+  --cor-destaque: #c9a24b;
+  --cor-destaque-realce: #e6c87a;
+  --cor-destaque-claro: rgba(201, 162, 75, 0.14);
+  --cor-sobre-destaque: #0b0b0c;
+  --gradiente-dourado: linear-gradient(135deg, #e6c87a 0%, #c9a24b 55%, #a8832f 100%);
+  --cor-sucesso: #6fcf97;
+  --cor-sucesso-fundo: rgba(111, 207, 151, 0.12);
   --cor-whatsapp: #25d366;
   --cor-whatsapp-escuro: #1da851;
-  --cor-alerta-fundo: #fdf3e7;
-  --cor-alerta-texto: #8a5a1c;
-  --cor-perigo: #b3402d;
+  --cor-alerta-fundo: rgba(201, 162, 75, 0.12);
+  --cor-alerta-texto: #e6c87a;
+  --cor-perigo: #ef8a7a;
 
   --fonte-titulo: 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
   --fonte-texto: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 
   --raio: 14px;
   --raio-pequeno: 999px;
-  --sombra: 0 10px 30px rgba(43, 36, 32, 0.08);
+  --sombra: 0 12px 32px rgba(0, 0, 0, 0.55);
   --altura-cabecalho: 60px;
 
   /* Margem lateral das páginas: cresce no tablet e respeita o entalhe (notch) do celular deitado */
@@ -73,6 +81,12 @@ button {
   display: none !important;
 }
 
+/* Contorno de foco (teclado e abertura de janelas) no dourado do tema */
+:focus-visible {
+  outline: 2px solid var(--cor-destaque);
+  outline-offset: 2px;
+}
+
 .apenas-leitor {
   position: absolute;
   width: 1px;
@@ -93,7 +107,7 @@ button {
   justify-content: space-between;
   height: var(--altura-cabecalho);
   padding: 0 var(--margem-direita) 0 var(--margem-esquerda);
-  background: rgba(251, 248, 245, 0.92);
+  background: rgba(11, 11, 12, 0.88);
   backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--cor-borda);
 }
@@ -138,7 +152,7 @@ button {
   padding: 0 5px;
   border-radius: var(--raio-pequeno);
   background: var(--cor-destaque);
-  color: #fff;
+  color: var(--cor-sobre-destaque);
   font-size: 11px;
   font-weight: 600;
   line-height: 20px;
@@ -183,8 +197,9 @@ button {
   margin-top: 12px;
   padding: 6px 14px;
   border-radius: var(--raio-pequeno);
+  border: 1px solid rgba(201, 162, 75, 0.45);
   background: var(--cor-destaque-claro);
-  color: var(--cor-destaque-escuro);
+  color: var(--cor-destaque-realce);
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.04em;
@@ -246,16 +261,16 @@ button {
 }
 
 .chip[aria-pressed='true'] {
-  border-color: var(--cor-texto);
-  background: var(--cor-texto);
-  color: #fff;
+  border-color: var(--cor-destaque);
+  background: var(--cor-destaque);
+  color: var(--cor-sobre-destaque);
 }
 
 .bolinha-cor {
   display: inline-block;
   width: 14px;
   height: 14px;
-  border: 1px solid rgba(0, 0, 0, 0.12);
+  border: 1px solid rgba(245, 241, 232, 0.3);
   border-radius: 50%;
 }
 
@@ -272,7 +287,7 @@ button {
   padding: 0;
   border: 0;
   background: none;
-  color: var(--cor-destaque-escuro);
+  color: var(--cor-destaque-realce);
   font-size: 13px;
   font-weight: 600;
   text-decoration: underline;
@@ -302,7 +317,7 @@ button {
   width: 100%;
   aspect-ratio: 3 / 4;
   border-radius: var(--raio);
-  background: #f1ebe5;
+  background: var(--cor-superficie-elevada);
   object-fit: cover;
 }
 
@@ -364,8 +379,9 @@ button {
   gap: 12px;
   padding: 12px 12px 12px 18px;
   border-radius: 18px;
-  background: var(--cor-texto);
-  color: #fff;
+  border: 1px solid rgba(201, 162, 75, 0.45);
+  background: var(--cor-superficie-elevada);
+  color: var(--cor-texto);
   box-shadow: var(--sombra);
 }
 
@@ -405,22 +421,26 @@ button {
 }
 
 .botao-primario {
-  background: var(--cor-texto);
-  color: #fff;
+  background: var(--gradiente-dourado);
+  color: var(--cor-sobre-destaque);
+}
+
+.botao-primario:not(:disabled):hover {
+  filter: brightness(1.08);
 }
 
 .botao-claro {
-  background: #fff;
-  color: var(--cor-texto);
+  background: var(--cor-texto);
+  color: var(--cor-sobre-destaque);
 }
 
 .botao-destaque {
   background: var(--cor-destaque);
-  color: #fff;
+  color: var(--cor-sobre-destaque);
 }
 
 .botao-destaque:not(:disabled):hover {
-  background: var(--cor-destaque-escuro);
+  background: var(--cor-destaque-realce);
 }
 
 .botao-contorno {
@@ -430,8 +450,8 @@ button {
 }
 
 .botao-perigo {
-  border-color: #f0d4ce;
-  background: #fff;
+  border-color: rgba(239, 138, 122, 0.4);
+  background: transparent;
   color: var(--cor-perigo);
 }
 
@@ -472,7 +492,7 @@ button {
 }
 
 .janela::backdrop {
-  background: rgba(43, 36, 32, 0.45);
+  background: rgba(0, 0, 0, 0.72);
 }
 
 .janela[open] {
@@ -591,13 +611,14 @@ button {
   padding: 0 14px;
   border: 1px solid var(--cor-borda);
   border-radius: 10px;
-  background: #fff;
+  background: var(--cor-superficie);
   font-size: 14px;
 }
 
 .opcao[aria-pressed='true'] {
-  border-color: var(--cor-texto);
-  box-shadow: inset 0 0 0 1px var(--cor-texto);
+  border-color: var(--cor-destaque);
+  box-shadow: inset 0 0 0 1px var(--cor-destaque);
+  color: var(--cor-destaque-realce);
   font-weight: 600;
 }
 
@@ -614,7 +635,7 @@ button {
   align-items: center;
   border: 1px solid var(--cor-borda);
   border-radius: 10px;
-  background: #fff;
+  background: var(--cor-superficie);
 }
 
 .seletor-quantidade button {
@@ -758,7 +779,7 @@ button {
 }
 
 .aviso.sucesso {
-  background: #e9f5ef;
+  background: var(--cor-sucesso-fundo);
   color: var(--cor-sucesso);
 }
 
@@ -784,7 +805,7 @@ button {
   padding: 10px 18px;
   border-radius: 18px;
   background: var(--cor-texto);
-  color: #fff;
+  color: var(--cor-sobre-destaque);
   font-size: 14px;
   text-align: center;
   box-shadow: var(--sombra);
@@ -830,7 +851,7 @@ button {
   padding: 0 14px;
   border: 1px solid var(--cor-borda);
   border-radius: 12px;
-  background: #fff;
+  background: var(--cor-campo);
   font-size: 16px;
 }
 
@@ -898,7 +919,7 @@ fieldset.campo legend {
   padding: 8px 14px;
   border: 1px solid var(--cor-borda);
   border-radius: 10px;
-  background: #fff;
+  background: var(--cor-superficie);
   font-weight: 500;
   cursor: pointer;
 }
@@ -986,8 +1007,9 @@ fieldset.campo legend {
 }
 
 .aba[aria-selected='true'] {
-  background: #fff;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  background: var(--cor-superficie-elevada);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+  color: var(--cor-destaque-realce);
 }
 
 .topo-secao {
@@ -1018,7 +1040,7 @@ fieldset.campo legend {
   padding: 12px;
   border: 1px solid var(--cor-borda);
   border-radius: var(--raio);
-  background: #fff;
+  background: var(--cor-superficie);
 }
 
 .linha-produto-admin.inativo {

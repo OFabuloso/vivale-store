@@ -78,6 +78,7 @@
     preto: '#1f1f1f',
     branco: '#ffffff',
     'off white': '#f3eee4',
+    creme: '#efe3c8',
     nude: '#e3c4a8',
     bege: '#d9c3a5',
     caramelo: '#b07a45',
@@ -86,11 +87,15 @@
     'verde militar': '#5b6142',
     'verde oliva': '#7a7a48',
     'verde menta': '#b7dcc8',
+    'verde lima': '#b5d334',
+    'verde agua': '#7fd1c1',
     verde: '#4f7a5a',
     'rosa bebe': '#f4cfd6',
     rosa: '#e7a1b0',
     'rosa antigo': '#c99198',
     pink: '#e0457b',
+    coral: '#f07c66',
+    salmao: '#f4a38c',
     vermelho: '#b3282d',
     vinho: '#6d1f2f',
     terracota: '#b5654a',
@@ -99,6 +104,8 @@
     amarelo: '#f1d36b',
     azul: '#3f63a8',
     'azul marinho': '#1f2a44',
+    'azul royal': '#2d4fd6',
+    'azul bebe': '#bcd8f0',
     'azul serenity': '#a9c1e0',
     jeans: '#5b7aa0',
     lilas: '#c2a8d6',
@@ -110,9 +117,46 @@
     prata: '#c0c0c0',
   };
 
-  /** Retorna o código hexadecimal de uma cor pelo nome (ou um tom neutro se não for conhecida). */
+  const COR_NEUTRA = '#cbbfb4';
+
+  /** Separa nomes compostos: "Amarelo, Bege e Marrom" -> ["amarelo", "bege", "marrom"]. */
+  function separarCoresCompostas(nomeCor) {
+    return normalizarTexto(nomeCor)
+      .split(/\s*,\s*|\s+e\s+/)
+      .filter((parteNome) => parteNome !== '');
+  }
+
+  /**
+   * Retorna o código hexadecimal de uma cor pelo nome. Em nomes compostos usa a primeira
+   * cor conhecida; se nenhuma for conhecida, devolve um tom neutro.
+   */
   function obterHexDaCor(nomeCor) {
-    return MAPA_CORES[normalizarTexto(nomeCor)] || '#cbbfb4';
+    const nomeNormalizado = normalizarTexto(nomeCor);
+    if (MAPA_CORES[nomeNormalizado]) return MAPA_CORES[nomeNormalizado];
+    const primeiraConhecida = separarCoresCompostas(nomeCor).find((parteNome) => MAPA_CORES[parteNome]);
+    return primeiraConhecida ? MAPA_CORES[primeiraConhecida] : COR_NEUTRA;
+  }
+
+  /**
+   * Valor CSS de "background" para a bolinha de cor. Nomes compostos ("Preto e Branco")
+   * viram fatias lado a lado, uma para cada cor.
+   */
+  function obterFundoDaCor(nomeCor) {
+    const nomeNormalizado = normalizarTexto(nomeCor);
+    if (MAPA_CORES[nomeNormalizado]) return MAPA_CORES[nomeNormalizado];
+
+    const coresDasPartes = separarCoresCompostas(nomeCor).map(
+      (parteNome) => MAPA_CORES[parteNome] || COR_NEUTRA,
+    );
+    if (coresDasPartes.length <= 1) return coresDasPartes[0] || COR_NEUTRA;
+
+    const larguraFatia = 100 / coresDasPartes.length;
+    const fatias = coresDasPartes.map((corDaParte, posicao) => {
+      const inicio = Number((posicao * larguraFatia).toFixed(2));
+      const fim = Number(((posicao + 1) * larguraFatia).toFixed(2));
+      return `${corDaParte} ${inicio}% ${fim}%`;
+    });
+    return `linear-gradient(90deg, ${fatias.join(', ')})`;
   }
 
   /** Gera uma imagem SVG elegante para produtos sem foto. */
@@ -125,7 +169,7 @@
       `<stop offset="0" stop-color="${corFundo}" stop-opacity="0.35"/>` +
       `<stop offset="1" stop-color="${corFundo}" stop-opacity="0.75"/>` +
       `</linearGradient></defs>` +
-      `<rect width="300" height="400" fill="#f6f1ec"/>` +
+      `<rect width="300" height="400" fill="#1c1c1f"/>` +
       `<rect width="300" height="400" fill="url(#g)"/>` +
       `<text x="150" y="225" text-anchor="middle" font-family="Georgia,serif" ` +
       `font-size="120" fill="#ffffff" fill-opacity="0.85">${inicial}</text>` +
@@ -142,6 +186,7 @@
     gerarId,
     normalizarTexto,
     obterHexDaCor,
+    obterFundoDaCor,
     gerarImagemPlaceholder,
   };
 
