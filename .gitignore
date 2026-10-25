@@ -1,0 +1,12 @@
+# Pacotes originais das fotos (não fazem parte do site)
+*.zip
+
+# Dependências e arquivos do sistema
+node_modules/
+.DS_Store
+
+# Fotos originais recebidas pelo WhatsApp (o site usa só img/produtos/)
+img/WhatsApp*/
+
+# Relatório interno (não deve ser publicado)
+RELATORIO_complemtentos.txt

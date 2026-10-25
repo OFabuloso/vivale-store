@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#fbf8f5" />
+    <title>Vivale Store</title>
+    <meta name="description" content="Atacado de moda feminina — monte seu pedido e finalize pelo WhatsApp." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="css/estilos.css" />
+  </head>
+  <body>
+    <header class="cabecalho">
+      <a class="logo" href="index.html">Vivale <span>Store</span></a>
+      <button class="botao-icone" id="botao-abrir-carrinho" type="button" aria-label="Abrir carrinho">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+          <path d="M6 7h12l-1 13H7L6 7Z" stroke-linejoin="round" />
+          <path d="M9 7a3 3 0 0 1 6 0" stroke-linecap="round" />
+        </svg>
+        <span class="contador-carrinho oculto" id="contador-carrinho">0</span>
+      </button>
+    </header>
+
+    <main>
+      <section class="apresentacao">
+        <h1><span class="marca-titulo">Vivale <span>Store</span>,</span><br />Moda feminina<br />no atacado</h1>
+        <p>Escolha as peças, monte seu pedido e finalize pelo WhatsApp.</p>
+        <span class="selo-minimo" id="selo-minimo"></span>
+      </section>
+
+      <section class="filtros" aria-label="Filtros do catálogo">
+        <div class="grupo-filtro">
+          <p class="grupo-filtro-titulo">Categoria</p>
+          <div class="lista-chips" id="filtro-categoria"></div>
+        </div>
+        <div class="grupo-filtro">
+          <p class="grupo-filtro-titulo">Tamanho</p>
+          <div class="lista-chips" id="filtro-tamanho"></div>
+        </div>
+        <div class="grupo-filtro">
+          <p class="grupo-filtro-titulo">Cor</p>
+          <div class="lista-chips" id="filtro-cor"></div>
+        </div>
+      </section>
+
+      <div class="barra-resultados">
+        <span id="quantidade-resultados"></span>
+        <button class="botao-texto oculto" id="botao-limpar-filtros" type="button">Limpar filtros</button>
+      </div>
+
+      <section class="grade-produtos" id="grade-produtos" aria-live="polite"></section>
+    </main>
+
+    <!-- Barra fixa com o resumo do carrinho -->
+    <div class="barra-carrinho oculto" id="barra-carrinho">
+      <div class="barra-carrinho-resumo">
+        <span id="barra-carrinho-pecas"></span>
+        <strong id="barra-carrinho-total"></strong>
+      </div>
+      <button class="botao botao-claro botao-pequeno" id="botao-barra-carrinho" type="button">Ver pedido</button>
+    </div>
+
+    <!-- Detalhe do produto: escolha de tamanho, cor e quantidade -->
+    <dialog class="janela janela-produto" id="janela-produto" aria-labelledby="detalhe-produto-nome">
+      <div class="janela-cabecalho">
+        <span class="grupo-filtro-titulo" id="detalhe-produto-categoria"></span>
+        <button class="botao-fechar" type="button" data-fechar aria-label="Fechar">×</button>
+      </div>
+      <div class="janela-corpo">
+        <img class="detalhe-produto-foto" id="detalhe-produto-foto" alt="" />
+        <h2 class="detalhe-produto-nome" id="detalhe-produto-nome"></h2>
+        <p class="detalhe-produto-preco" id="detalhe-produto-preco"></p>
+        <p class="detalhe-produto-descricao oculto" id="detalhe-produto-descricao"></p>
+
+        <span class="rotulo-opcao">Tamanho <span id="detalhe-tamanho-escolhido"></span></span>
+        <div class="opcoes" id="detalhe-tamanhos"></div>
+
+        <span class="rotulo-opcao">Cor <span id="detalhe-cor-escolhida"></span></span>
+        <div class="opcoes" id="detalhe-cores"></div>
+
+        <p class="mensagem-erro margem-topo oculto" id="detalhe-erro"></p>
+      </div>
+      <div class="janela-rodape">
+        <div class="linha-adicionar">
+          <div class="seletor-quantidade">
+            <button type="button" id="detalhe-diminuir" aria-label="Diminuir quantidade">−</button>
+            <input type="number" id="detalhe-quantidade" value="1" min="1" inputmode="numeric" aria-label="Quantidade" />
+            <button type="button" id="detalhe-aumentar" aria-label="Aumentar quantidade">+</button>
+          </div>
+          <button class="botao botao-primario" id="botao-adicionar-carrinho" type="button">Adicionar</button>
+        </div>
+      </div>
+    </dialog>
+
+    <!-- Carrinho -->
+    <dialog class="janela gaveta" id="janela-carrinho" aria-labelledby="titulo-carrinho">
+      <div class="janela-cabecalho">
+        <h2 id="titulo-carrinho">Seu pedido</h2>
+        <button class="botao-fechar" type="button" data-fechar aria-label="Fechar">×</button>
+      </div>
+      <div class="janela-corpo" id="lista-carrinho"></div>
+      <div class="janela-rodape" id="rodape-carrinho">
+        <div class="resumo-linha">
+          <span>Total de peças</span>
+          <span id="resumo-pecas"></span>
+        </div>
+        <div class="resumo-linha total">
+          <span>Valor total</span>
+          <span id="resumo-total"></span>
+        </div>
+        <div class="progresso-minimo" aria-hidden="true">
+          <div class="progresso-minimo-barra" id="progresso-minimo-barra"></div>
+        </div>
+        <p class="aviso" id="aviso-minimo" role="status"></p>
+        <div class="campo campo-observacoes">
+          <label for="observacoes-pedido">Observações (opcional)</label>
+          <textarea
+            id="observacoes-pedido"
+            rows="2"
+            maxlength="500"
+            placeholder="Ex.: pagamento via Pix, endereço de entrega..."
+          ></textarea>
+        </div>
+        <button class="botao botao-whatsapp" id="botao-finalizar-whatsapp" type="button">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 18.2c-1.5 0-3-.4-4.3-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2Zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.6.1-.7.8-.8 1-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.3-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.1 5.1 0 0 0 1.1 2.7 11.7 11.7 0 0 0 4.5 4c1.7.7 2.3.8 3.1.6a2.7 2.7 0 0 0 1.8-1.2 2.2 2.2 0 0 0 .2-1.3c-.1-.1-.3-.2-.5-.3Z" />
+          </svg>
+          Finalizar pedido no WhatsApp
+        </button>
+        <div class="acoes-centralizadas">
+          <button class="botao-texto" id="botao-esvaziar-carrinho" type="button">Esvaziar carrinho</button>
+        </div>
+      </div>
+    </dialog>
+
+    <!-- Ordem importa: dados → lógica → telas → página -->
+    <script src="js/dados/dados-iniciais.js"></script>
+    <script src="js/logica/utilidades.js"></script>
+    <script src="js/logica/carrinho.js"></script>
+    <script src="js/logica/whatsapp.js"></script>
+    <script src="js/logica/armazenamento.js"></script>
+    <script src="js/telas/componentes.js"></script>
+    <script src="js/telas/tela-carrinho.js"></script>
+    <script src="js/telas/tela-catalogo.js"></script>
+    <script src="js/paginas/pagina-loja.js"></script>
+  </body>
+</html>

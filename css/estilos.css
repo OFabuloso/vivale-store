@@ -1,0 +1,1332 @@
+/* =========================================================
+   Vivale Store — estilos (mobile-first)
+   ========================================================= */
+
+:root {
+  --cor-fundo: #fbf8f5;
+  --cor-superficie: #ffffff;
+  --cor-texto: #2b2420;
+  --cor-texto-suave: #8a7f78;
+  --cor-borda: #ece4dc;
+  --cor-destaque: #b9806b;
+  --cor-destaque-escuro: #9a6552;
+  --cor-destaque-claro: #f5e9e3;
+  --cor-sucesso: #2f7d5b;
+  --cor-whatsapp: #25d366;
+  --cor-whatsapp-escuro: #1da851;
+  --cor-alerta-fundo: #fdf3e7;
+  --cor-alerta-texto: #8a5a1c;
+  --cor-perigo: #b3402d;
+
+  --fonte-titulo: 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
+  --fonte-texto: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+
+  --raio: 14px;
+  --raio-pequeno: 999px;
+  --sombra: 0 10px 30px rgba(43, 36, 32, 0.08);
+  --altura-cabecalho: 60px;
+
+  /* Margem lateral das páginas: cresce no tablet e respeita o entalhe (notch) do celular deitado */
+  --margem-base: 16px;
+  --margem-esquerda: max(var(--margem-base), env(safe-area-inset-left));
+  --margem-direita: max(var(--margem-base), env(safe-area-inset-right));
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--cor-fundo);
+  color: var(--cor-texto);
+  font-family: var(--fonte-texto);
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+.oculto {
+  display: none !important;
+}
+
+.apenas-leitor {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ---------- Cabeçalho ---------- */
+
+.cabecalho {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: var(--altura-cabecalho);
+  padding: 0 var(--margem-direita) 0 var(--margem-esquerda);
+  background: rgba(251, 248, 245, 0.92);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--cor-borda);
+}
+
+.logo {
+  font-family: var(--fonte-titulo);
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--cor-texto);
+  text-decoration: none;
+}
+
+.logo span {
+  color: var(--cor-destaque);
+  font-style: italic;
+}
+
+.botao-icone {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border: 1px solid var(--cor-borda);
+  border-radius: 50%;
+  background: var(--cor-superficie);
+}
+
+.botao-icone svg {
+  width: 20px;
+  height: 20px;
+}
+
+.contador-carrinho {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: var(--raio-pequeno);
+  background: var(--cor-destaque);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 20px;
+  text-align: center;
+}
+
+/* ---------- Apresentação ---------- */
+
+.apresentacao {
+  padding: 22px var(--margem-direita) 10px var(--margem-esquerda);
+  text-align: center;
+}
+
+.apresentacao h1 {
+  margin: 0;
+  font-family: var(--fonte-titulo);
+  font-size: 32px;
+  font-weight: 500;
+  line-height: 1.1;
+}
+
+/* Nome da loja no título, com o mesmo visual do logo */
+.marca-titulo {
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--cor-texto);
+}
+
+.marca-titulo span {
+  color: var(--cor-destaque);
+  font-style: italic;
+}
+
+.apresentacao p {
+  margin: 8px 0 0;
+  color: var(--cor-texto-suave);
+  font-size: 14px;
+}
+
+.selo-minimo {
+  display: inline-block;
+  margin-top: 12px;
+  padding: 6px 14px;
+  border-radius: var(--raio-pequeno);
+  background: var(--cor-destaque-claro);
+  color: var(--cor-destaque-escuro);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* ---------- Filtros ---------- */
+
+.filtros {
+  padding: 8px 0 4px;
+}
+
+.grupo-filtro {
+  margin-bottom: 10px;
+}
+
+.grupo-filtro-titulo {
+  margin: 0 var(--margem-direita) 6px var(--margem-esquerda);
+  color: var(--cor-texto-suave);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* No cabeçalho da janela de detalhe o título fica alinhado ao botão de fechar */
+.janela-cabecalho .grupo-filtro-titulo {
+  margin: 0;
+}
+
+.lista-chips {
+  display: flex;
+  gap: 8px;
+  padding: 2px var(--margem-direita) 2px var(--margem-esquerda);
+  overflow-x: auto;
+  scrollbar-width: none;
+  /* Rolagem lateral suave no toque, sem "puxar" a página junto */
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.lista-chips::-webkit-scrollbar {
+  display: none;
+}
+
+.chip {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-pequeno);
+  background: var(--cor-superficie);
+  font-size: 13px;
+  white-space: nowrap;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.chip[aria-pressed='true'] {
+  border-color: var(--cor-texto);
+  background: var(--cor-texto);
+  color: #fff;
+}
+
+.bolinha-cor {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 50%;
+}
+
+.barra-resultados {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px var(--margem-direita) 10px var(--margem-esquerda);
+  color: var(--cor-texto-suave);
+  font-size: 13px;
+}
+
+.botao-texto {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--cor-destaque-escuro);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* ---------- Grade de produtos ---------- */
+
+.grade-produtos {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px 12px;
+  /* Espaço no fim para a barra flutuante do carrinho não cobrir os últimos produtos */
+  padding: 0 var(--margem-direita) calc(110px + env(safe-area-inset-bottom)) var(--margem-esquerda);
+}
+
+.cartao-produto {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+}
+
+.cartao-produto-foto {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  border-radius: var(--raio);
+  background: #f1ebe5;
+  object-fit: cover;
+}
+
+.cartao-produto-categoria {
+  margin-top: 10px;
+  color: var(--cor-texto-suave);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.cartao-produto-nome {
+  margin: 2px 0 0;
+  font-family: var(--fonte-titulo);
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.cartao-produto-preco {
+  margin-top: 4px;
+  font-weight: 600;
+}
+
+.cartao-produto-preco small {
+  color: var(--cor-texto-suave);
+  font-weight: 400;
+}
+
+.cartao-produto-cores {
+  display: flex;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.cartao-produto-cores .bolinha-cor {
+  width: 12px;
+  height: 12px;
+}
+
+.estado-vazio {
+  grid-column: 1 / -1;
+  padding: 48px 16px;
+  color: var(--cor-texto-suave);
+  text-align: center;
+}
+
+/* ---------- Barra inferior do carrinho ---------- */
+
+.barra-carrinho {
+  position: fixed;
+  right: max(12px, env(safe-area-inset-right));
+  bottom: calc(12px + env(safe-area-inset-bottom));
+  left: max(12px, env(safe-area-inset-left));
+  z-index: 15;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 12px 12px 18px;
+  border-radius: 18px;
+  background: var(--cor-texto);
+  color: #fff;
+  box-shadow: var(--sombra);
+}
+
+.barra-carrinho-resumo {
+  display: flex;
+  flex-direction: column;
+  font-size: 12px;
+  line-height: 1.3;
+  opacity: 0.9;
+}
+
+.barra-carrinho-resumo strong {
+  font-size: 16px;
+  opacity: 1;
+}
+
+/* ---------- Botões ---------- */
+
+.botao {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 46px;
+  padding: 0 20px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 0.15s, opacity 0.15s;
+}
+
+.botao:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.botao-primario {
+  background: var(--cor-texto);
+  color: #fff;
+}
+
+.botao-claro {
+  background: #fff;
+  color: var(--cor-texto);
+}
+
+.botao-destaque {
+  background: var(--cor-destaque);
+  color: #fff;
+}
+
+.botao-destaque:not(:disabled):hover {
+  background: var(--cor-destaque-escuro);
+}
+
+.botao-contorno {
+  border-color: var(--cor-borda);
+  background: var(--cor-superficie);
+  color: var(--cor-texto);
+}
+
+.botao-perigo {
+  border-color: #f0d4ce;
+  background: #fff;
+  color: var(--cor-perigo);
+}
+
+.botao-whatsapp {
+  width: 100%;
+  background: var(--cor-whatsapp);
+  color: #fff;
+}
+
+.botao-whatsapp:not(:disabled):hover {
+  background: var(--cor-whatsapp-escuro);
+}
+
+.botao-largo {
+  width: 100%;
+}
+
+.botao-pequeno {
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 10px;
+  font-size: 13px;
+}
+
+/* ---------- Janelas (dialog) — bottom sheet no celular ---------- */
+
+.janela {
+  width: 100%;
+  max-width: 100%;
+  max-height: 92vh;
+  max-height: 92dvh;
+  margin: auto 0 0;
+  padding: 0;
+  border: 0;
+  border-radius: 22px 22px 0 0;
+  background: var(--cor-superficie);
+  color: var(--cor-texto);
+}
+
+.janela::backdrop {
+  background: rgba(43, 36, 32, 0.45);
+}
+
+.janela[open] {
+  display: flex;
+  flex-direction: column;
+  animation: subir 0.22s ease-out;
+}
+
+@keyframes subir {
+  from {
+    transform: translateY(40px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.janela-cabecalho {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid var(--cor-borda);
+}
+
+.janela-cabecalho h2 {
+  margin: 0;
+  font-family: var(--fonte-titulo);
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.janela-corpo {
+  flex: 1;
+  min-height: 0;
+  padding: 16px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.janela-rodape {
+  flex-shrink: 0;
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--cor-borda);
+  background: var(--cor-superficie);
+}
+
+.botao-fechar {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--cor-fundo);
+  font-size: 20px;
+  line-height: 1;
+}
+
+/* ---------- Detalhe do produto ---------- */
+
+.detalhe-produto-foto {
+  width: 100%;
+  max-height: 30vh;
+  max-height: 30dvh;
+  aspect-ratio: 3 / 4;
+  border-radius: var(--raio);
+  object-fit: cover;
+}
+
+.detalhe-produto-nome {
+  margin: 12px 0 0;
+  font-family: var(--fonte-titulo);
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1.15;
+}
+
+.detalhe-produto-preco {
+  margin: 4px 0 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.detalhe-produto-descricao {
+  margin: 10px 0 0;
+  color: var(--cor-texto-suave);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.rotulo-opcao {
+  display: block;
+  margin: 14px 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.rotulo-opcao span {
+  color: var(--cor-texto-suave);
+  font-weight: 400;
+}
+
+.opcoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.opcao {
+  min-width: 48px;
+  min-height: 42px;
+  padding: 0 14px;
+  border: 1px solid var(--cor-borda);
+  border-radius: 10px;
+  background: #fff;
+  font-size: 14px;
+}
+
+.opcao[aria-pressed='true'] {
+  border-color: var(--cor-texto);
+  box-shadow: inset 0 0 0 1px var(--cor-texto);
+  font-weight: 600;
+}
+
+.opcao-cor {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ---------- Seletor de quantidade ---------- */
+
+.seletor-quantidade {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--cor-borda);
+  border-radius: 10px;
+  background: #fff;
+}
+
+.seletor-quantidade button {
+  width: 40px;
+  height: 40px;
+  border: 0;
+  background: none;
+  font-size: 18px;
+}
+
+.seletor-quantidade input {
+  width: 44px;
+  height: 40px;
+  border: 0;
+  background: none;
+  font-size: 16px;
+  font-weight: 600;
+  text-align: center;
+  -moz-appearance: textfield;
+}
+
+.seletor-quantidade input::-webkit-outer-spin-button,
+.seletor-quantidade input::-webkit-inner-spin-button {
+  margin: 0;
+  -webkit-appearance: none;
+}
+
+.seletor-quantidade.compacto button,
+.seletor-quantidade.compacto input {
+  height: 34px;
+}
+
+.seletor-quantidade.compacto button {
+  width: 34px;
+}
+
+.linha-adicionar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.linha-adicionar .botao {
+  flex: 1;
+}
+
+/* ---------- Carrinho ---------- */
+
+.item-carrinho {
+  display: grid;
+  grid-template-columns: 64px 1fr;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--cor-borda);
+}
+
+.item-carrinho:last-child {
+  border-bottom: 0;
+}
+
+.item-carrinho img {
+  width: 64px;
+  height: 84px;
+  border-radius: 10px;
+  object-fit: cover;
+}
+
+.item-carrinho-nome {
+  margin: 0;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.item-carrinho-variacao {
+  margin: 2px 0 0;
+  color: var(--cor-texto-suave);
+  font-size: 13px;
+}
+
+.item-carrinho-acoes {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.item-carrinho-subtotal {
+  font-weight: 600;
+}
+
+.botao-remover {
+  min-height: 32px;
+  padding: 4px 0;
+  border: 0;
+  background: none;
+  color: var(--cor-texto-suave);
+  font-size: 12px;
+  text-decoration: underline;
+}
+
+.resumo-linha {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 4px;
+  font-size: 14px;
+}
+
+.resumo-linha.total {
+  margin: 4px 0 8px;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.progresso-minimo {
+  height: 6px;
+  margin: 6px 0 8px;
+  overflow: hidden;
+  border-radius: var(--raio-pequeno);
+  background: var(--cor-borda);
+}
+
+.progresso-minimo-barra {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--cor-destaque);
+  transition: width 0.3s ease;
+}
+
+.progresso-minimo-barra.completo {
+  background: var(--cor-sucesso);
+}
+
+.aviso {
+  margin: 0 0 10px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: var(--cor-alerta-fundo);
+  color: var(--cor-alerta-texto);
+  font-size: 13px;
+}
+
+.aviso.sucesso {
+  background: #e9f5ef;
+  color: var(--cor-sucesso);
+}
+
+#rodape-carrinho .acoes-centralizadas {
+  margin-top: 4px;
+}
+
+.carrinho-vazio {
+  padding: 40px 0;
+  color: var(--cor-texto-suave);
+  text-align: center;
+}
+
+/* ---------- Aviso flutuante (toast) ---------- */
+
+.toast {
+  position: fixed;
+  top: calc(var(--altura-cabecalho) + 12px);
+  left: 50%;
+  z-index: 50;
+  width: max-content;
+  max-width: calc(100vw - 32px);
+  padding: 10px 18px;
+  border-radius: 18px;
+  background: var(--cor-texto);
+  color: #fff;
+  font-size: 14px;
+  text-align: center;
+  box-shadow: var(--sombra);
+  transform: translateX(-50%);
+  animation: aparecer 0.2s ease-out;
+}
+
+@keyframes aparecer {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -8px);
+  }
+}
+
+/* ---------- Formulários (Admin) ---------- */
+
+.campo {
+  margin-bottom: 14px;
+}
+
+.campo label,
+.campo legend {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.campo-ajuda {
+  margin-top: 4px;
+  color: var(--cor-texto-suave);
+  font-size: 12px;
+}
+
+.campo input[type='text'],
+.campo input[type='password'],
+.campo input[type='tel'],
+.campo input[type='url'],
+.campo textarea,
+.campo select {
+  width: 100%;
+  min-height: 46px;
+  padding: 0 14px;
+  border: 1px solid var(--cor-borda);
+  border-radius: 12px;
+  background: #fff;
+  font-size: 16px;
+}
+
+/* A descrição tem várias linhas: precisa de respiro vertical */
+.campo textarea {
+  padding: 12px 14px;
+  resize: vertical;
+}
+
+/* Observações no rodapé do carrinho: fica entre o aviso do mínimo e o botão */
+.campo-observacoes {
+  margin: 12px 0;
+}
+
+/* Campo de arquivo: o padrão do navegador estoura a largura no celular */
+.campo input[type='file'] {
+  width: 100%;
+  max-width: 100%;
+  color: var(--cor-texto-suave);
+  font-size: 13px;
+}
+
+.campo input[type='file']::file-selector-button {
+  min-height: 40px;
+  margin-right: 10px;
+  padding: 0 14px;
+  border: 1px solid var(--cor-borda);
+  border-radius: 10px;
+  background: var(--cor-superficie);
+  color: var(--cor-texto);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.campo input:focus,
+.campo select:focus {
+  border-color: var(--cor-destaque);
+  outline: 2px solid var(--cor-destaque-claro);
+}
+
+/* Zera margens e recuos padrão do fieldset para alinhar com os outros campos */
+fieldset.campo {
+  min-width: 0;
+  margin: 0 0 14px;
+  padding: 0;
+  border: 0;
+}
+
+fieldset.campo legend {
+  padding: 0;
+}
+
+.opcoes-checkbox {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.opcoes-checkbox label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 8px 14px;
+  border: 1px solid var(--cor-borda);
+  border-radius: 10px;
+  background: #fff;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.opcoes-checkbox input {
+  accent-color: var(--cor-destaque);
+}
+
+.linha-campos {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+}
+
+.previa-foto {
+  width: 96px;
+  height: 128px;
+  margin-top: 8px;
+  border-radius: 10px;
+  object-fit: cover;
+}
+
+.mensagem-erro {
+  margin: 0 0 12px;
+  color: var(--cor-perigo);
+  font-size: 13px;
+}
+
+/* ---------- Admin ---------- */
+
+.tela-login {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: 16px var(--margem-direita) 16px var(--margem-esquerda);
+}
+
+.cartao {
+  width: 100%;
+  max-width: 420px;
+  padding: 24px;
+  border: 1px solid var(--cor-borda);
+  border-radius: 20px;
+  background: var(--cor-superficie);
+  box-shadow: var(--sombra);
+}
+
+.cartao h1,
+.cartao h2 {
+  margin: 0 0 4px;
+  font-family: var(--fonte-titulo);
+  font-weight: 600;
+}
+
+.cartao p {
+  margin: 0 0 18px;
+  color: var(--cor-texto-suave);
+  font-size: 14px;
+}
+
+.conteudo-admin {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 16px var(--margem-direita) calc(48px + env(safe-area-inset-bottom)) var(--margem-esquerda);
+}
+
+.abas {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 16px;
+  padding: 4px;
+  border-radius: 12px;
+  background: var(--cor-borda);
+}
+
+.aba {
+  flex: 1;
+  min-height: 40px;
+  border: 0;
+  border-radius: 9px;
+  background: none;
+  font-weight: 600;
+}
+
+.aba[aria-selected='true'] {
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.topo-secao {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.topo-secao h2 {
+  margin: 0;
+  font-family: var(--fonte-titulo);
+  font-size: 26px;
+  font-weight: 600;
+}
+
+.lista-admin {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.linha-produto-admin {
+  display: grid;
+  grid-template-columns: 56px 1fr;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio);
+  background: #fff;
+}
+
+.linha-produto-admin.inativo {
+  opacity: 0.6;
+}
+
+.linha-produto-admin img {
+  width: 56px;
+  height: 74px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.linha-produto-admin > div {
+  min-width: 0;
+}
+
+.linha-produto-admin h3 {
+  margin: 0;
+  font-size: 15px;
+  overflow-wrap: anywhere;
+}
+
+.linha-produto-admin p {
+  margin: 2px 0 0;
+  color: var(--cor-texto-suave);
+  font-size: 13px;
+}
+
+.acoes-produto-admin {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.etiqueta {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 8px;
+  border-radius: var(--raio-pequeno);
+  background: var(--cor-borda);
+  font-size: 11px;
+  font-weight: 600;
+  vertical-align: middle;
+}
+
+.secao-config {
+  margin-bottom: 16px;
+}
+
+.secao-config.cartao {
+  max-width: none;
+  box-shadow: none;
+}
+
+.grupo-botoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* ---------- Celulares pequenos (até 359px, ex.: iPhone SE 1ª geração, Androids compactos) ---------- */
+
+@media (max-width: 359px) {
+  :root {
+    --margem-base: 12px;
+  }
+
+  .logo {
+    font-size: 21px;
+  }
+
+  .apresentacao h1 {
+    font-size: 28px;
+  }
+
+  .grade-produtos {
+    gap: 16px 10px;
+  }
+
+  .cartao-produto-nome {
+    font-size: 16px;
+  }
+
+  .seletor-quantidade button {
+    width: 36px;
+  }
+
+  .seletor-quantidade input {
+    width: 38px;
+  }
+
+  /* Categoria e preço empilhados: dois campos lado a lado ficam estreitos demais */
+  .linha-campos {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+}
+
+/* ---------- Celular deitado (pouca altura) ---------- */
+
+@media (max-height: 500px) and (orientation: landscape) {
+  .apresentacao {
+    padding-top: 12px;
+  }
+
+  .apresentacao h1 br {
+    display: none;
+  }
+
+  /* Com pouca altura a janela rola por inteiro, em vez de espremer a lista entre cabeçalho e rodapé */
+  .janela[open] {
+    overflow-y: auto;
+  }
+
+  .janela .janela-corpo {
+    flex: none;
+    overflow: visible;
+  }
+
+  .janela .janela-rodape {
+    position: sticky;
+    bottom: 0;
+  }
+
+  /* No carrinho o rodapé é alto: ele rola junto, depois dos itens */
+  .janela.gaveta .janela-rodape {
+    position: static;
+  }
+}
+
+/* ---------- Tablets (a partir de 640px) ---------- */
+
+@media (min-width: 640px) {
+  :root {
+    --margem-base: 24px;
+  }
+
+  .grade-produtos {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 28px 20px;
+  }
+
+  .apresentacao {
+    padding-top: 32px;
+  }
+
+  .apresentacao h1 {
+    font-size: 44px;
+  }
+
+  .janela {
+    max-width: 480px;
+    margin: auto;
+    border-radius: 22px;
+  }
+
+  .janela-cabecalho {
+    padding: 16px 20px 12px;
+  }
+
+  .janela-corpo {
+    padding: 20px;
+  }
+
+  .janela-rodape {
+    padding: 14px 20px;
+  }
+
+  /* Detalhe do produto em duas colunas: foto à esquerda, escolhas à direita */
+  .janela.janela-produto {
+    max-width: min(760px, calc(100vw - 48px));
+  }
+
+  .janela-produto .janela-corpo {
+    display: grid;
+    grid-template-columns: minmax(0, 0.85fr) minmax(0, 1fr);
+    grid-auto-rows: min-content;
+    column-gap: 24px;
+    align-content: start;
+  }
+
+  .janela-produto .janela-corpo > * {
+    grid-column: 2;
+  }
+
+  .janela-produto .detalhe-produto-foto {
+    grid-column: 1;
+    grid-row: 1 / span 20;
+    position: sticky;
+    top: 0;
+    max-height: calc(92vh - 170px);
+    max-height: calc(92dvh - 170px);
+  }
+
+  .janela-produto .detalhe-produto-nome {
+    margin-top: 0;
+  }
+
+  /* O carrinho vira uma gaveta lateral */
+  .janela.gaveta {
+    width: min(420px, 100vw);
+    max-width: none;
+    height: 100vh;
+    height: 100dvh;
+    max-height: 100vh;
+    max-height: 100dvh;
+    margin: 0 0 0 auto;
+    border-radius: 0;
+  }
+
+  .janela.gaveta .janela-cabecalho {
+    padding-top: max(16px, env(safe-area-inset-top));
+  }
+
+  .janela.gaveta .janela-rodape {
+    padding-bottom: calc(14px + env(safe-area-inset-bottom));
+  }
+
+  .barra-carrinho {
+    right: max(24px, env(safe-area-inset-right));
+    left: auto;
+    width: 380px;
+  }
+
+  .linha-adicionar .botao {
+    flex: 0 1 auto;
+    min-width: 200px;
+    margin-left: auto;
+  }
+}
+
+/* ---------- Tablet em pé e maiores (a partir de 768px) ---------- */
+
+@media (min-width: 768px) {
+  /* Com espaço sobrando, os filtros quebram linha em vez de exigir rolagem lateral */
+  .lista-chips {
+    flex-wrap: wrap;
+    overflow-x: visible;
+  }
+
+  .lista-admin {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .lista-admin .estado-vazio {
+    grid-column: 1 / -1;
+  }
+
+  .janela#janela-formulario-produto {
+    max-width: 560px;
+  }
+}
+
+/* ---------- Tablet deitado e computadores (a partir de 1024px) ---------- */
+
+@media (min-width: 1024px) {
+  :root {
+    --margem-base: 32px;
+  }
+
+  .grade-produtos,
+  .filtros,
+  .barra-resultados {
+    max-width: 1200px;
+    margin-right: auto;
+    margin-left: auto;
+  }
+
+  .grade-produtos {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+/* No tablet deitado a altura é curta: apresentação mais baixa para os produtos aparecerem antes */
+@media (min-width: 1024px) and (max-height: 820px) {
+  .apresentacao {
+    padding-top: 20px;
+  }
+
+  .apresentacao h1 {
+    font-size: 38px;
+  }
+
+  .grupo-filtro {
+    margin-bottom: 6px;
+  }
+}
+
+/* ---------- Utilitários de espaçamento ---------- */
+
+.acoes-centralizadas {
+  margin-top: 12px;
+  text-align: center;
+}
+
+.margem-topo {
+  margin-top: 14px;
+}
+
+.margem-topo-pequena {
+  margin-top: 6px;
+}
+
+/* O formulário não cria caixa própria: cabeçalho, corpo e rodapé seguem o layout da janela */
+.formulario-janela {
+  display: contents;
+}

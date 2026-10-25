@@ -1,0 +1,10 @@
+{
+  "name": "loja-atacadista",
+  "version": "1.0.0",
+  "private": true,
+  "description": "E-commerce B2B de moda feminina no atacado, sem banco de dados (LocalStorage + WhatsApp).",
+  "scripts": {
+    "test": "node --test tests/",
+    "start": "python3 -m http.server 8080"
+  }
+}
