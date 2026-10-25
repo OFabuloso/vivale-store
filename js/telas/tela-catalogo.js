@@ -44,6 +44,7 @@
     );
     elementos.botaoLimparFiltros.addEventListener('click', limparFiltros);
     elementos.grade.addEventListener('click', tratarCliqueNoProduto);
+    elementos.grade.addEventListener('mouseover', posicionarDestaqueDoCartao);
 
     elementos.detalheTamanhos.addEventListener('click', (evento) =>
       escolherOpcao(evento, 'tamanho'),
@@ -159,6 +160,29 @@
     elementos.grade.querySelectorAll('img[data-id]').forEach((elementoImagem, posicao) => {
       componentes.aplicarFotoComReserva(elementoImagem, produtosFiltrados[posicao]);
     });
+  }
+
+  // A moldura do cartão cresce 30% ao passar o mouse (ver estilos.css)
+  const AUMENTO_DO_DESTAQUE = 0.3;
+  const FOLGA_DA_BORDA = 8;
+
+  /**
+   * Cartões perto da borda da tela crescem para dentro da página,
+   * para a moldura ampliada não ser cortada nem criar rolagem lateral.
+   */
+  function posicionarDestaqueDoCartao(evento) {
+    const cartao = evento.target.closest('.cartao-produto');
+    if (!cartao || cartao.contains(evento.relatedTarget)) return;
+
+    const moldura = cartao.querySelector('.moldura-foto');
+    const area = moldura.getBoundingClientRect();
+    const crescimentoDeCadaLado = (area.width * AUMENTO_DO_DESTAQUE) / 2;
+    const larguraDaTela = document.documentElement.clientWidth;
+
+    let origemHorizontal = 'center';
+    if (area.left - crescimentoDeCadaLado < FOLGA_DA_BORDA) origemHorizontal = 'left';
+    else if (area.right + crescimentoDeCadaLado > larguraDaTela - FOLGA_DA_BORDA) origemHorizontal = 'right';
+    moldura.style.transformOrigin = `${origemHorizontal} center`;
   }
 
   /** Lupa da foto do produto: o zoom (feito no CSS) parte do ponto onde está o mouse. */
