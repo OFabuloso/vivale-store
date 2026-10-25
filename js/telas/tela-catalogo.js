@@ -25,6 +25,7 @@
 
     elementos.janela = document.getElementById('janela-produto');
     elementos.detalheFoto = document.getElementById('detalhe-produto-foto');
+    elementos.detalheMoldura = document.getElementById('detalhe-produto-moldura');
     elementos.detalheCategoria = document.getElementById('detalhe-produto-categoria');
     elementos.detalheNome = document.getElementById('detalhe-produto-nome');
     elementos.detalhePreco = document.getElementById('detalhe-produto-preco');
@@ -51,6 +52,7 @@
     document.getElementById('detalhe-diminuir').addEventListener('click', () => mudarQuantidade(-1));
     document.getElementById('detalhe-aumentar').addEventListener('click', () => mudarQuantidade(1));
     document.getElementById('botao-adicionar-carrinho').addEventListener('click', adicionarAoCarrinho);
+    elementos.detalheMoldura.addEventListener('mousemove', acompanharLupa);
 
     // Se o Admin alterar o catálogo em outra aba, a loja se atualiza sozinha
     raiz.addEventListener('storage', (evento) => {
@@ -159,6 +161,14 @@
     });
   }
 
+  /** Lupa da foto do produto: o zoom (feito no CSS) parte do ponto onde está o mouse. */
+  function acompanharLupa(evento) {
+    const area = elementos.detalheMoldura.getBoundingClientRect();
+    const percentualHorizontal = ((evento.clientX - area.left) / area.width) * 100;
+    const percentualVertical = ((evento.clientY - area.top) / area.height) * 100;
+    elementos.detalheFoto.style.transformOrigin = `${percentualHorizontal}% ${percentualVertical}%`;
+  }
+
   function montarHtmlCartao(produto) {
     const bolinhas = produto.cores
       .map(
@@ -168,7 +178,9 @@
       .join('');
     return `
       <button type="button" class="cartao-produto" data-id-produto="${escaparHtml(produto.id)}">
-        <img class="cartao-produto-foto" data-id="${escaparHtml(produto.id)}" alt="${escaparHtml(produto.nome)}" loading="lazy" />
+        <span class="moldura-foto">
+          <img class="cartao-produto-foto" data-id="${escaparHtml(produto.id)}" alt="${escaparHtml(produto.nome)}" loading="lazy" />
+        </span>
         <span class="cartao-produto-categoria">${escaparHtml(produto.categoria)}</span>
         <h3 class="cartao-produto-nome">${escaparHtml(produto.nome)}</h3>
         <span class="cartao-produto-preco">${formatarMoeda(produto.preco)} <small>/peça</small></span>

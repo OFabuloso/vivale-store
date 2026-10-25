@@ -313,12 +313,19 @@ button {
   text-align: left;
 }
 
+/* Moldura que corta a foto ampliada pelo zoom */
+.moldura-foto {
+  display: block;
+  overflow: hidden;
+  border-radius: var(--raio);
+  background: var(--cor-superficie-elevada);
+}
+
 .cartao-produto-foto {
   width: 100%;
   aspect-ratio: 3 / 4;
-  border-radius: var(--raio);
-  background: var(--cor-superficie-elevada);
   object-fit: cover;
+  transition: transform 0.5s ease;
 }
 
 .cartao-produto-categoria {
@@ -562,8 +569,31 @@ button {
   max-height: 30vh;
   max-height: 30dvh;
   aspect-ratio: 3 / 4;
-  border-radius: var(--raio);
   object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+/* Zoom só para quem usa mouse: em tela de toque não existe "passar por cima" */
+@media (hover: hover) and (pointer: fine) {
+  .cartao-produto:hover .cartao-produto-foto {
+    transform: scale(1.12);
+  }
+
+  /* Lupa: amplia a partir do ponto do mouse (definido em tela-catalogo.js) */
+  .detalhe-produto-moldura {
+    cursor: zoom-in;
+  }
+
+  .detalhe-produto-moldura:hover .detalhe-produto-foto {
+    transform: scale(2);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cartao-produto-foto,
+  .detalhe-produto-foto {
+    transition: none;
+  }
 }
 
 .detalhe-produto-nome {
@@ -1228,11 +1258,15 @@ fieldset.campo legend {
     grid-column: 2;
   }
 
-  .janela-produto .detalhe-produto-foto {
+  .janela-produto .detalhe-produto-moldura {
     grid-column: 1;
     grid-row: 1 / span 20;
     position: sticky;
     top: 0;
+    align-self: start;
+  }
+
+  .janela-produto .detalhe-produto-foto {
     max-height: calc(92vh - 170px);
     max-height: calc(92dvh - 170px);
   }
