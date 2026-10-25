@@ -74,6 +74,11 @@
       <div class="janela-corpo">
         <div class="moldura-foto detalhe-produto-moldura" id="detalhe-produto-moldura">
           <img class="detalhe-produto-foto" id="detalhe-produto-foto" alt="" />
+          <button class="botao-expandir-foto" id="botao-expandir-foto" type="button" aria-label="Ampliar foto">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+              <path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </button>
         </div>
         <h2 class="detalhe-produto-nome" id="detalhe-produto-nome"></h2>
         <p class="detalhe-produto-preco" id="detalhe-produto-preco"></p>
@@ -97,6 +102,15 @@
           <button class="botao botao-primario" id="botao-adicionar-carrinho" type="button">Adicionar</button>
         </div>
       </div>
+    </dialog>
+
+    <!-- Foto em tela cheia (celular e tablet): pinça, arraste e toque duplo -->
+    <dialog class="visualizador-foto" id="visualizador-foto" aria-label="Foto ampliada">
+      <button class="botao-fechar" type="button" data-fechar aria-label="Fechar">×</button>
+      <div class="visualizador-foto-area" id="visualizador-foto-area">
+        <img class="visualizador-foto-imagem" id="visualizador-foto-imagem" alt="" draggable="false" />
+      </div>
+      <p class="visualizador-foto-dica">Use dois dedos para ampliar · toque duas vezes para aproximar</p>
     </dialog>
 
     <!-- Carrinho -->
@@ -145,9 +159,11 @@
     <script src="js/logica/utilidades.js"></script>
     <script src="js/logica/carrinho.js"></script>
     <script src="js/logica/whatsapp.js"></script>
+    <script src="js/logica/zoom.js"></script>
     <script src="js/logica/armazenamento.js"></script>
     <script src="js/telas/componentes.js"></script>
     <script src="js/telas/tela-carrinho.js"></script>
+    <script src="js/telas/visualizador-foto.js"></script>
     <script src="js/telas/tela-catalogo.js"></script>
     <script src="js/paginas/pagina-loja.js"></script>
   </body>

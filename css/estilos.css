@@ -605,7 +605,116 @@ button {
   }
 }
 
+/* Botão de ampliar a foto: só em telas de toque (celular e tablet) */
+.detalhe-produto-moldura {
+  position: relative;
+}
+
+.botao-expandir-foto {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border: 1px solid rgba(201, 162, 75, 0.6);
+  border-radius: 50%;
+  background: rgba(11, 11, 12, 0.72);
+  color: var(--cor-destaque-realce);
+  backdrop-filter: blur(6px);
+}
+
+.botao-expandir-foto svg {
+  width: 20px;
+  height: 20px;
+}
+
+@media (hover: none), (pointer: coarse) {
+  .botao-expandir-foto {
+    display: inline-flex;
+  }
+}
+
+/* ---------- Foto em tela cheia ---------- */
+
+.visualizador-foto {
+  width: 100vw;
+  max-width: none;
+  height: 100vh;
+  height: 100dvh;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: #000;
+  color: var(--cor-texto);
+}
+
+.visualizador-foto[open] {
+  display: flex;
+  flex-direction: column;
+}
+
+.visualizador-foto::backdrop {
+  background: #000;
+}
+
+.visualizador-foto .botao-fechar {
+  position: absolute;
+  top: max(12px, env(safe-area-inset-top));
+  right: max(12px, env(safe-area-inset-right));
+  z-index: 2;
+  border: 1px solid rgba(201, 162, 75, 0.6);
+  background: rgba(11, 11, 12, 0.72);
+  color: var(--cor-texto);
+}
+
+.visualizador-foto-area {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  /* O navegador não pode tratar a pinça como zoom da página inteira */
+  touch-action: none;
+}
+
+.visualizador-foto-imagem {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  transition: transform 0.25s ease;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+/* Durante o gesto a foto acompanha o dedo, sem atraso */
+.visualizador-foto.em-gesto .visualizador-foto-imagem {
+  transition: none;
+}
+
+/* A dica flutua sobre a foto para a área de zoom ocupar a tela inteira */
+.visualizador-foto-dica {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  margin: 0;
+  padding: 24px 16px calc(14px + env(safe-area-inset-bottom));
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.75));
+  pointer-events: none;
+  color: var(--cor-texto-suave);
+  font-size: 13px;
+  text-align: center;
+  transition: opacity 0.2s;
+}
+
+.visualizador-foto.ampliada .visualizador-foto-dica {
+  opacity: 0;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .visualizador-foto-imagem,
   .cartao-produto-foto,
   .cartao-produto .moldura-foto,
   .detalhe-produto-foto {

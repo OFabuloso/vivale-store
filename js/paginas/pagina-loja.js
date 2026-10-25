@@ -7,5 +7,6 @@
 
   raiz.Loja.armazenamento.inicializar();
   raiz.Loja.telaCarrinho.iniciar();
+  raiz.Loja.visualizadorFoto.iniciar();
   raiz.Loja.telaCatalogo.iniciar();
 })(window);

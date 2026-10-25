@@ -54,6 +54,12 @@
     document.getElementById('detalhe-aumentar').addEventListener('click', () => mudarQuantidade(1));
     document.getElementById('botao-adicionar-carrinho').addEventListener('click', adicionarAoCarrinho);
     elementos.detalheMoldura.addEventListener('mousemove', acompanharLupa);
+    document.getElementById('botao-expandir-foto').addEventListener('click', () => {
+      raiz.Loja.visualizadorFoto.abrir(
+        elementos.detalheFoto.currentSrc || elementos.detalheFoto.src,
+        elementos.detalheFoto.alt,
+      );
+    });
 
     // Se o Admin alterar o catálogo em outra aba, a loja se atualiza sozinha
     raiz.addEventListener('storage', (evento) => {
