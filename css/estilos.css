@@ -186,16 +186,19 @@ button {
   line-height: 1.1;
 }
 
-/* Nome da loja no título, com o mesmo visual do logo */
-.marca-titulo {
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  color: var(--cor-texto);
-}
-
-.marca-titulo span {
-  color: var(--cor-destaque);
-  font-style: italic;
+/* Logo completa no topo, com as bordas esfumadas para se misturar ao fundo */
+.logo-completa {
+  width: 200px;
+  height: auto;
+  margin: 0 auto 6px;
+  -webkit-mask-image:
+    linear-gradient(to right, transparent, #000 5%, #000 95%, transparent),
+    linear-gradient(to bottom, transparent, #000 5%, #000 95%, transparent);
+  -webkit-mask-composite: source-in;
+  mask-image:
+    linear-gradient(to right, transparent, #000 5%, #000 95%, transparent),
+    linear-gradient(to bottom, transparent, #000 5%, #000 95%, transparent);
+  mask-composite: intersect;
 }
 
 .apresentacao p {
@@ -1320,6 +1323,11 @@ fieldset.campo legend {
     display: none;
   }
 
+  /* seletor mais específico para vencer o tamanho de telas largas, que vem depois */
+  .apresentacao .logo-completa {
+    width: 120px;
+  }
+
   /* Com pouca altura a janela rola por inteiro, em vez de espremer a lista entre cabeçalho e rodapé */
   .janela[open] {
     overflow-y: auto;
@@ -1355,6 +1363,10 @@ fieldset.campo legend {
 
   .apresentacao {
     padding-top: 32px;
+  }
+
+  .logo-completa {
+    width: 260px;
   }
 
   .apresentacao h1 {
