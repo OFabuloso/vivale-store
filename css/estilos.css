@@ -6,7 +6,7 @@
 :root {
   color-scheme: dark;
 
-  --cor-fundo: #0b0b0c;
+  --cor-fundo: #0c0d10;
   --cor-superficie: #141416;
   --cor-superficie-elevada: #1c1c1f;
   --cor-campo: #101012;
@@ -58,6 +58,17 @@ body {
   font-size: 15px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+}
+
+/* Fundo de "seda preta" como o da logo (textura em img/marca/fundo-seda.jpg).
+   Fica numa camada fixa para não rolar junto e funcionar também no iPhone. */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: var(--cor-fundo) url('../img/marca/fundo-seda.jpg') center / cover no-repeat;
 }
 
 img {
