@@ -1,5 +1,5 @@
 /**
- * Painel do Vendedor: login simples, CRUD de produtos e configurações da loja.
+ * Painel do Vendedor: login simples, CRUD de produtos, contatos do WhatsApp e configurações da loja.
  *
  * ATENÇÃO: a senha é validada no próprio navegador. Isso apenas esconde o painel
  * de clientes curiosas; não é uma proteção real (qualquer pessoa pode ler o código).
@@ -7,8 +7,8 @@
 (function (raiz) {
   'use strict';
 
-  const { armazenamento, utilidades, componentes, imagem } = raiz.Loja;
-  const { formatarMoeda, escaparHtml, lerValorMonetario, normalizarTelefone, gerarId } = utilidades;
+  const { armazenamento, utilidades, componentes, imagem, contatos } = raiz.Loja;
+  const { formatarMoeda, escaparHtml, lerValorMonetario, gerarId } = utilidades;
 
   const CHAVE_SESSAO = 'loja_atacado_admin_logado';
   const elementos = {};
@@ -54,6 +54,11 @@
     });
     componentes.configurarJanela(elementos.janelaProduto);
 
+    elementos.listaContatos = document.getElementById('lista-contatos-admin');
+    elementos.erroContatos = document.getElementById('erro-contatos');
+    elementos.listaContatos.addEventListener('click', tratarAcaoContato);
+    document.getElementById('botao-adicionar-contato').addEventListener('click', adicionarContatoVazio);
+    document.getElementById('formulario-contatos').addEventListener('submit', salvarContatos);
     document.getElementById('formulario-configuracao').addEventListener('submit', salvarConfiguracoes);
     document.getElementById('botao-exportar').addEventListener('click', exportarCatalogo);
     document.getElementById('botao-restaurar').addEventListener('click', restaurarExemplo);
@@ -313,25 +318,91 @@
     }
   }
 
+  // ---------- Contatos do WhatsApp ----------
+
+  /** Desenha uma linha editável (nome + número + remover) para cada contato salvo. */
+  function preencherContatos() {
+    const { contatosWhatsApp } = armazenamento.obterConfiguracao();
+    elementos.listaContatos.innerHTML = '';
+    contatosWhatsApp.forEach(adicionarLinhaContato);
+    elementos.erroContatos.classList.add('oculto');
+  }
+
+  function adicionarLinhaContato(contato) {
+    const idContato = contato.id || contatos.gerarIdContato();
+    const idSeguro = escaparHtml(idContato);
+    const linha = document.createElement('div');
+    linha.className = 'linha-contato-admin';
+    linha.dataset.idContato = idContato;
+    linha.innerHTML = `
+      <div class="campo">
+        <label for="${idSeguro}-nome">Nome</label>
+        <input type="text" id="${idSeguro}-nome" data-campo="nome" maxlength="40" placeholder="Ex.: Vendas" />
+      </div>
+      <div class="campo">
+        <label for="${idSeguro}-numero">WhatsApp</label>
+        <input type="tel" id="${idSeguro}-numero" data-campo="numero" inputmode="tel" placeholder="(21) 99999-9999" />
+      </div>
+      <button class="botao botao-perigo botao-pequeno" type="button" data-acao="remover-contato">Remover</button>`;
+    // Valores atribuídos via propriedade: dispensa escapar o texto digitado
+    linha.querySelector('[data-campo="nome"]').value = contato.nome || '';
+    linha.querySelector('[data-campo="numero"]').value = contato.numero
+      ? contatos.formatarTelefone(contato.numero)
+      : '';
+    elementos.listaContatos.appendChild(linha);
+    return linha;
+  }
+
+  function adicionarContatoVazio() {
+    const novaLinha = adicionarLinhaContato({ nome: '', numero: '' });
+    novaLinha.querySelector('[data-campo="nome"]').focus();
+  }
+
+  function tratarAcaoContato(evento) {
+    const botao = evento.target.closest('button[data-acao="remover-contato"]');
+    if (!botao) return;
+    const linha = botao.closest('.linha-contato-admin');
+    const nomeContato = linha.querySelector('[data-campo="nome"]').value.trim() || 'este contato';
+    if (!confirm(`Remover ${nomeContato}? A alteração só vale depois de salvar.`)) return;
+    linha.remove();
+  }
+
+  function salvarContatos(evento) {
+    evento.preventDefault();
+    const contatosDigitados = [...elementos.listaContatos.querySelectorAll('.linha-contato-admin')].map(
+      (linha) => ({
+        id: linha.dataset.idContato,
+        nome: linha.querySelector('[data-campo="nome"]').value,
+        numero: linha.querySelector('[data-campo="numero"]').value,
+      }),
+    );
+
+    const resultado = contatos.validarContatos(contatosDigitados);
+    elementos.erroContatos.textContent = resultado.erro || '';
+    elementos.erroContatos.classList.toggle('oculto', !resultado.erro);
+    if (resultado.erro) return;
+
+    armazenamento.salvarConfiguracao({ contatosWhatsApp: resultado.contatos });
+    preencherContatos();
+    componentes.mostrarToast('Contatos salvos');
+  }
+
   // ---------- Configurações ----------
 
   function preencherConfiguracoes() {
     const configuracao = armazenamento.obterConfiguracao();
-    document.getElementById('campo-whatsapp').value = configuracao.numeroWhatsApp;
     document.getElementById('campo-valor-minimo').value = String(configuracao.valorMinimo).replace('.', ',');
+    preencherContatos();
   }
 
   function salvarConfiguracoes(evento) {
     evento.preventDefault();
     const elementoErro = document.getElementById('erro-configuracao');
-    const numeroWhatsApp = normalizarTelefone(document.getElementById('campo-whatsapp').value);
     const valorMinimo = lerValorMonetario(document.getElementById('campo-valor-minimo').value || '0');
     const campoNovaSenha = document.getElementById('campo-nova-senha');
 
     let mensagemErro = '';
-    if (numeroWhatsApp.length < 12 || numeroWhatsApp.length > 13) {
-      mensagemErro = 'Informe o WhatsApp com DDD, ex.: (11) 99999-9999.';
-    } else if (!Number.isFinite(valorMinimo) || valorMinimo < 0) {
+    if (!Number.isFinite(valorMinimo) || valorMinimo < 0) {
       mensagemErro = 'Informe um valor mínimo válido (ex.: 300,00).';
     } else if (campoNovaSenha.value && campoNovaSenha.value.length < TAMANHO_MINIMO_SENHA) {
       mensagemErro = `A nova senha precisa ter pelo menos ${TAMANHO_MINIMO_SENHA} caracteres.`;
@@ -342,7 +413,6 @@
     if (mensagemErro) return;
 
     armazenamento.salvarConfiguracao({
-      numeroWhatsApp,
       valorMinimo: Math.round(valorMinimo * 100) / 100,
     });
     if (campoNovaSenha.value) armazenamento.salvarSenhaAdmin(campoNovaSenha.value);

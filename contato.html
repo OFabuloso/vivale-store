@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0b0b0c" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Finalizar pedido · Vivale Store</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="icon" href="img/marca/favicon.ico" sizes="any" />
+    <link rel="icon" type="image/png" href="img/marca/favicon-32.png" sizes="32x32" />
+    <link rel="apple-touch-icon" href="img/marca/apple-touch-icon.png" />
+    <link rel="stylesheet" href="css/estilos.css" />
+  </head>
+  <body>
+    <main class="escolha-contato">
+      <a href="index.html" aria-label="Voltar para a loja">
+        <img class="logo-completa" src="img/marca/logo.jpeg" alt="Vivale Store" width="600" height="632" />
+      </a>
+      <p class="escolha-contato-sobretitulo">Finalizar pedido</p>
+      <h1>Escolha o atendimento</h1>
+      <p class="escolha-contato-texto">
+        Selecione com quem deseja falar. A mensagem com o seu pedido já irá pronta no WhatsApp.
+      </p>
+      <span class="selo-minimo oculto" id="resumo-pedido-contato"></span>
+
+      <div class="escolha-contato-filete" aria-hidden="true"></div>
+
+      <ul class="lista-contatos" id="lista-contatos" aria-label="Contatos de atendimento"></ul>
+      <p class="aviso-contato oculto" id="aviso-contato" role="status"></p>
+
+      <a class="botao-texto escolha-contato-voltar" href="index.html">Voltar para a loja</a>
+    </main>
+
+    <!-- Ordem importa: dados → lógica → telas → página -->
+    <script src="js/dados/dados-iniciais.js"></script>
+    <script src="js/logica/utilidades.js"></script>
+    <script src="js/logica/carrinho.js"></script>
+    <script src="js/logica/contatos.js"></script>
+    <script src="js/logica/whatsapp.js"></script>
+    <script src="js/logica/armazenamento.js"></script>
+    <script src="js/telas/componentes.js"></script>
+    <script src="js/telas/tela-contato.js"></script>
+    <script src="js/paginas/pagina-contato.js"></script>
+  </body>
+</html>

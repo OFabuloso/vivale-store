@@ -62,14 +62,23 @@
 
         <!-- Aba: Configurações -->
         <section class="oculto" id="aba-configuracoes" role="tabpanel">
+          <form class="cartao secao-config" id="formulario-contatos" novalidate>
+            <h2>Contatos do WhatsApp</h2>
+            <p>
+              Ao finalizar o pedido, a cliente escolhe com qual destes contatos quer falar.
+              Use DDD + número; o código do país 55 é adicionado automaticamente.
+            </p>
+            <div class="lista-contatos-admin" id="lista-contatos-admin"></div>
+            <button class="botao botao-contorno botao-pequeno" id="botao-adicionar-contato" type="button">
+              + Adicionar contato
+            </button>
+            <p class="mensagem-erro margem-topo oculto" id="erro-contatos"></p>
+            <button class="botao botao-primario botao-largo margem-topo" type="submit">Salvar contatos</button>
+          </form>
+
           <form class="cartao secao-config" id="formulario-configuracao" novalidate>
             <h2>Configurações da loja</h2>
-            <p>Valem para o carrinho e para a mensagem do WhatsApp.</p>
-            <div class="campo">
-              <label for="campo-whatsapp">Número do WhatsApp (com DDD)</label>
-              <input type="tel" id="campo-whatsapp" inputmode="tel" placeholder="(11) 99999-9999" />
-              <p class="campo-ajuda">O código do país 55 é adicionado automaticamente.</p>
-            </div>
+            <p>Valem para o carrinho e para o acesso a este painel.</p>
             <div class="campo">
               <label for="campo-valor-minimo">Valor mínimo de compra (R$)</label>
               <input type="text" id="campo-valor-minimo" inputmode="decimal" placeholder="300,00" />
@@ -166,6 +175,7 @@
     <!-- Ordem importa: dados → lógica → telas → página -->
     <script src="js/dados/dados-iniciais.js"></script>
     <script src="js/logica/utilidades.js"></script>
+    <script src="js/logica/contatos.js"></script>
     <script src="js/logica/armazenamento.js"></script>
     <script src="js/logica/imagem.js"></script>
     <script src="js/telas/componentes.js"></script>

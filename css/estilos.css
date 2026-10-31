@@ -1285,6 +1285,256 @@ fieldset.campo legend {
   gap: 8px;
 }
 
+/* Dentro dos cartões a regra ".cartao p" deixava os erros cinza; mantém o vermelho */
+.cartao .mensagem-erro {
+  margin: 12px 0;
+  color: var(--cor-perigo);
+}
+
+/* Contatos do WhatsApp no painel: nome, número e remover em cada linha */
+.lista-contatos-admin {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.linha-contato-admin {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio);
+  background: var(--cor-campo);
+}
+
+.linha-contato-admin .campo {
+  margin: 0;
+}
+
+.linha-contato-admin .botao-perigo {
+  justify-self: start;
+}
+
+@media (min-width: 640px) {
+  .linha-contato-admin {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+    align-items: end;
+  }
+
+  .linha-contato-admin .botao-perigo {
+    min-height: 46px;
+  }
+}
+
+/* ---------- Escolha do contato (contato.html) ---------- */
+
+.escolha-contato {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  max-width: 460px;
+  min-height: 100vh;
+  min-height: 100dvh;
+  margin: 0 auto;
+  padding: 28px var(--margem-direita) calc(32px + env(safe-area-inset-bottom)) var(--margem-esquerda);
+  text-align: center;
+}
+
+.escolha-contato .logo-completa {
+  width: 150px;
+}
+
+.escolha-contato-sobretitulo {
+  margin: 6px 0 0;
+  color: var(--cor-destaque);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+}
+
+.escolha-contato h1 {
+  margin: 8px 0 0;
+  font-family: var(--fonte-titulo);
+  font-size: 34px;
+  font-weight: 500;
+  line-height: 1.1;
+}
+
+.escolha-contato-texto {
+  max-width: 340px;
+  margin: 10px 0 0;
+  color: var(--cor-texto-suave);
+  font-size: 14px;
+}
+
+/* Filete dourado que separa o título da lista */
+.escolha-contato-filete {
+  width: 72px;
+  height: 1px;
+  margin: 24px auto;
+  background: linear-gradient(to right, transparent, var(--cor-destaque), transparent);
+}
+
+.lista-contatos {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.botao-contato {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  min-height: 74px;
+  padding: 14px 18px;
+  border: 1px solid rgba(201, 162, 75, 0.28);
+  border-radius: 16px;
+  background: rgba(12, 12, 14, 0.72);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  color: var(--cor-texto);
+  text-align: left;
+  transition:
+    border-color 0.3s ease,
+    background 0.3s ease,
+    box-shadow 0.3s ease,
+    transform 0.3s ease;
+}
+
+.botao-contato-icone {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid rgba(201, 162, 75, 0.55);
+  border-radius: 50%;
+  color: var(--cor-destaque);
+  transition:
+    background 0.3s ease,
+    color 0.3s ease,
+    border-color 0.3s ease;
+}
+
+.botao-contato-icone svg {
+  width: 20px;
+  height: 20px;
+}
+
+.botao-contato-texto {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.botao-contato-nome {
+  font-family: var(--fonte-titulo);
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+  transition: color 0.3s ease;
+}
+
+.botao-contato-numero {
+  color: var(--cor-texto-suave);
+  font-size: 13px;
+  letter-spacing: 0.04em;
+}
+
+.botao-contato-seta {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  color: var(--cor-destaque);
+  opacity: 0.55;
+  transition:
+    transform 0.3s ease,
+    opacity 0.3s ease;
+}
+
+/* Hover: borda e brilho dourados, ícone preenchido e seta avançando */
+.botao-contato:hover,
+.botao-contato:focus-visible {
+  border-color: var(--cor-destaque);
+  background: rgba(22, 19, 14, 0.88);
+  box-shadow:
+    0 14px 34px rgba(0, 0, 0, 0.55),
+    0 0 26px rgba(201, 162, 75, 0.14);
+  transform: translateY(-2px);
+}
+
+.botao-contato:hover .botao-contato-icone,
+.botao-contato:focus-visible .botao-contato-icone {
+  border-color: transparent;
+  background: var(--gradiente-dourado);
+  color: var(--cor-sobre-destaque);
+}
+
+.botao-contato:hover .botao-contato-nome,
+.botao-contato:focus-visible .botao-contato-nome {
+  color: var(--cor-destaque-realce);
+}
+
+.botao-contato:hover .botao-contato-seta,
+.botao-contato:focus-visible .botao-contato-seta {
+  opacity: 1;
+  transform: translateX(4px);
+}
+
+.botao-contato:active {
+  transform: translateY(0);
+}
+
+.aviso-contato {
+  width: 100%;
+  margin: 0;
+  padding: 16px 18px;
+  border: 1px solid rgba(201, 162, 75, 0.3);
+  border-radius: 16px;
+  background: rgba(12, 12, 14, 0.72);
+  color: var(--cor-alerta-texto);
+  font-size: 14px;
+}
+
+.escolha-contato-voltar {
+  margin-top: 26px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .botao-contato,
+  .botao-contato-seta {
+    transition: none;
+  }
+
+  .botao-contato:hover,
+  .botao-contato:focus-visible,
+  .botao-contato:hover .botao-contato-seta,
+  .botao-contato:focus-visible .botao-contato-seta {
+    transform: none;
+  }
+}
+
+@media (min-width: 640px) {
+  .escolha-contato .logo-completa {
+    width: 180px;
+  }
+
+  .escolha-contato h1 {
+    font-size: 42px;
+  }
+}
+
 /* ---------- Celulares pequenos (até 359px, ex.: iPhone SE 1ª geração, Androids compactos) ---------- */
 
 @media (max-width: 359px) {

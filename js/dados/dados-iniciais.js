@@ -22,7 +22,8 @@ window.Loja = window.Loja || {};
 window.Loja.dadosIniciais = {
   versao: 5,
   configuracao: {
-    numeroWhatsApp: '5521979396729',
+    // Contatos que a cliente pode escolher ao finalizar o pedido
+    contatosWhatsApp: [{ id: 'contato-principal', nome: 'Atendimento', numero: '5521979396729' }],
     valorMinimo: 500,
   },
   produtos: [

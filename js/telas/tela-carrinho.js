@@ -1,10 +1,11 @@
 /**
- * Tela do carrinho: contador, barra inferior, gaveta com itens, validação do mínimo e envio ao WhatsApp.
+ * Tela do carrinho: contador, barra inferior, gaveta com itens, validação do mínimo
+ * e encaminhamento para a escolha do contato de WhatsApp (contato.html).
  */
 (function (raiz) {
   'use strict';
 
-  const { armazenamento, carrinho, whatsapp, utilidades, componentes } = raiz.Loja;
+  const { armazenamento, carrinho, utilidades, componentes } = raiz.Loja;
   const { formatarMoeda, escaparHtml } = utilidades;
 
   const elementos = {};
@@ -210,23 +211,12 @@
       return;
     }
 
-    try {
-      const linkWhatsApp = whatsapp.gerarLinkWhatsApp(
-        configuracao.numeroWhatsApp,
-        itens,
-        elementos.observacoes.value,
-      );
-      raiz.open(linkWhatsApp, '_blank', 'noopener');
-      // Itens e observações já foram na mensagem; o próximo pedido começa do zero
-      armazenamento.salvarCarrinho([]);
-      elementos.observacoes.value = '';
-      guardarObservacoes();
-      atualizar();
-      elementos.janela.close();
-      componentes.mostrarToast('Pedido enviado para o WhatsApp.');
-    } catch (erro) {
-      componentes.mostrarToast(erro.message);
-    }
+    // A escolha do atendimento acontece numa nova guia (contato.html), que lê o mesmo
+    // carrinho e as observações do LocalStorage e só então abre o WhatsApp.
+    // O carrinho é esvaziado lá; esta guia se atualiza sozinha pelo evento "storage".
+    guardarObservacoes();
+    raiz.open('contato.html', '_blank', 'noopener');
+    componentes.mostrarToast('Escolha o atendimento na nova guia.');
   }
 
   raiz.Loja.telaCarrinho = { iniciar, abrir, adicionar, atualizar };

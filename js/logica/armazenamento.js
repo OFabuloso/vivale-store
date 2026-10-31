@@ -130,10 +130,15 @@
 
   /** Configurações públicas da loja (nunca inclui a senha do painel). */
   function obterConfiguracao() {
-    const configuracaoCompleta = {
-      ...raiz.Loja.dadosIniciais.configuracao,
-      ...lerJson(CHAVES.configuracao, {}),
-    };
+    const configuracaoPadrao = raiz.Loja.dadosIniciais.configuracao;
+    const configuracaoSalva = lerJson(CHAVES.configuracao, {}) || {};
+    const configuracaoCompleta = { ...configuracaoPadrao, ...configuracaoSalva };
+    // Versões antigas tinham um único "numeroWhatsApp"; agora é uma lista de contatos
+    configuracaoCompleta.contatosWhatsApp = raiz.Loja.contatos.resolverContatos(
+      configuracaoSalva,
+      configuracaoPadrao,
+    );
+    delete configuracaoCompleta.numeroWhatsApp;
     // Um dados-iniciais.js antigo ainda pode trazer a senha; ela não pode vazar para a exportação
     delete configuracaoCompleta.senhaAdmin;
     return configuracaoCompleta;
