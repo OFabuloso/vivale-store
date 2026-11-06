@@ -10,3 +10,7 @@ img/WhatsApp*/
 
 # Relatório interno (não deve ser publicado)
 RELATORIO_complemtentos.txt
+
+# Relatório interno de próximos passos e trava temporária do LibreOffice
+proximos_passos.docx
+.~lock.*#
