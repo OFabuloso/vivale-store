@@ -5,7 +5,7 @@
   'use strict';
 
   const { armazenamento, utilidades, componentes, telaCarrinho } = raiz.Loja;
-  const { formatarMoeda, escaparHtml, obterFundoDaCor } = utilidades;
+  const { formatarMoeda, escaparHtml, obterFundoDaCor, montarRotuloDoBotaoFiltrar } = utilidades;
 
   // Ordem de exibição dos tamanhos nos filtros
   const ORDEM_TAMANHOS = ['PP', 'P', 'M', 'G', 'GG', 'XG', 'U'];
@@ -24,6 +24,9 @@
     elementos.filtroCor = document.getElementById('filtro-cor');
     elementos.quantidadeResultados = document.getElementById('quantidade-resultados');
     elementos.botaoLimparFiltros = document.getElementById('botao-limpar-filtros');
+    elementos.botaoFiltrar = document.getElementById('botao-filtrar');
+    elementos.rotuloBotaoFiltrar = document.getElementById('rotulo-botao-filtrar');
+    elementos.painelFiltros = document.getElementById('painel-filtros');
     elementos.seloMinimo = document.getElementById('selo-minimo');
 
     elementos.janela = document.getElementById('janela-produto');
@@ -46,6 +49,7 @@
       lista.addEventListener('click', tratarCliqueNoFiltro),
     );
     elementos.botaoLimparFiltros.addEventListener('click', limparFiltros);
+    elementos.botaoFiltrar.addEventListener('click', alternarPainelFiltros);
     elementos.grade.addEventListener('click', tratarCliqueNoProduto);
     elementos.grade.addEventListener('mouseover', posicionarDestaqueDoCartao);
 
@@ -137,6 +141,12 @@
     renderizar();
   }
 
+  /** Abre ou recolhe o painel com os filtros de tamanho e cor. */
+  function alternarPainelFiltros() {
+    const painelRecolhido = elementos.painelFiltros.classList.toggle('oculto');
+    elementos.botaoFiltrar.setAttribute('aria-expanded', String(!painelRecolhido));
+  }
+
   function limparFiltros() {
     filtrosAtivos.categoria = null;
     filtrosAtivos.tamanho = null;
@@ -159,6 +169,9 @@
       produtosFiltrados.length === 1 ? 'peça' : 'peças'
     }`;
     elementos.botaoLimparFiltros.classList.toggle('oculto', !algumFiltroAtivo);
+    // Mostra no botão os filtros que ficam escondidos quando o painel está recolhido
+    const filtrosDoPainel = [filtrosAtivos.tamanho, filtrosAtivos.cor].filter(Boolean).length;
+    elementos.rotuloBotaoFiltrar.textContent = montarRotuloDoBotaoFiltrar(filtrosDoPainel);
 
     if (produtosFiltrados.length === 0) {
       elementos.grade.innerHTML = `<p class="estado-vazio">Nenhuma peça encontrada com esses filtros.</p>`;
@@ -213,11 +226,10 @@
       <button type="button" class="cartao-produto" data-id-produto="${escaparHtml(produto.id)}">
         <span class="moldura-foto">
           <img class="cartao-produto-foto" data-id="${escaparHtml(produto.id)}" alt="${escaparHtml(produto.nome)}" loading="lazy" />
+          <span class="cartao-produto-cores">${bolinhas}</span>
         </span>
-        <span class="cartao-produto-categoria">${escaparHtml(produto.categoria)}</span>
         <h3 class="cartao-produto-nome">${escaparHtml(produto.nome)}</h3>
         <span class="cartao-produto-preco">${formatarMoeda(produto.preco)} <small>/peça</small></span>
-        <span class="cartao-produto-cores">${bolinhas}</span>
       </button>`;
   }
 

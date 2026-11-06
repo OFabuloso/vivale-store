@@ -175,6 +175,11 @@
     ).join(', ');
   }
 
+  /** Texto do botão que abre os filtros, com a quantidade de filtros ativos dentro do painel. */
+  function montarRotuloDoBotaoFiltrar(quantidadeDeFiltros) {
+    return quantidadeDeFiltros > 0 ? `Filtrar (${quantidadeDeFiltros})` : 'Filtrar';
+  }
+
   /** Gera uma imagem SVG elegante para produtos sem foto. */
   function gerarImagemPlaceholder(nomeProduto, nomeCor) {
     const corFundo = obterHexDaCor(nomeCor);
@@ -205,6 +210,7 @@
     obterFundoDaCor,
     LARGURAS_FOTO_OTIMIZADA,
     montarSrcsetDaFoto,
+    montarRotuloDoBotaoFiltrar,
     gerarImagemPlaceholder,
   };
 

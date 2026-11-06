@@ -32,19 +32,33 @@
     <main>
       <section class="apresentacao">
         <picture>
-          <source type="image/webp" srcset="img/marca/logo-400.webp 400w, img/marca/logo-600.webp 600w" sizes="(min-width: 640px) 260px, 200px" />
+          <source type="image/webp" srcset="img/marca/logo-400.webp 400w, img/marca/logo-600.webp 600w" sizes="(min-width: 640px) 150px, 120px" />
           <img class="logo-completa" src="img/marca/logo.jpeg" alt="Vivale Store" width="600" height="632" fetchpriority="high" />
         </picture>
-        <h1>Moda feminina <br />no atacado</h1>
+        <h1>Moda feminina no atacado</h1>
         <p>Escolha as peças, monte seu pedido e finalize pelo WhatsApp.</p>
         <span class="selo-minimo" id="selo-minimo"></span>
       </section>
 
-      <section class="filtros" aria-label="Filtros do catálogo">
-        <div class="grupo-filtro">
-          <p class="grupo-filtro-titulo">Categoria</p>
-          <div class="lista-chips" id="filtro-categoria"></div>
+      <section class="filtros" aria-label="Categorias do catálogo">
+        <div class="lista-chips" id="filtro-categoria" role="group" aria-label="Categoria"></div>
+      </section>
+
+      <div class="barra-resultados">
+        <span id="quantidade-resultados"></span>
+        <div class="barra-resultados-acoes">
+          <button class="botao-texto oculto" id="botao-limpar-filtros" type="button">Limpar filtros</button>
+          <button class="chip" id="botao-filtrar" type="button" aria-expanded="false" aria-controls="painel-filtros">
+            <svg class="icone-filtrar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+              <path d="M4 7h16M7 12h10M10 17h4" />
+            </svg>
+            <span id="rotulo-botao-filtrar">Filtrar</span>
+          </button>
         </div>
+      </div>
+
+      <!-- Tamanho e cor ficam recolhidos para os produtos aparecerem antes -->
+      <section class="painel-filtros oculto" id="painel-filtros" aria-label="Mais filtros">
         <div class="grupo-filtro">
           <p class="grupo-filtro-titulo">Tamanho</p>
           <div class="lista-chips" id="filtro-tamanho"></div>
@@ -54,11 +68,6 @@
           <div class="lista-chips" id="filtro-cor"></div>
         </div>
       </section>
-
-      <div class="barra-resultados">
-        <span id="quantidade-resultados"></span>
-        <button class="botao-texto oculto" id="botao-limpar-filtros" type="button">Limpar filtros</button>
-      </div>
 
       <section class="grade-produtos" id="grade-produtos" aria-live="polite"></section>
     </main>

@@ -1,7 +1,12 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 
-const { obterHexDaCor, obterFundoDaCor, montarSrcsetDaFoto } = require('../js/logica/utilidades.js');
+const {
+  obterHexDaCor,
+  obterFundoDaCor,
+  montarSrcsetDaFoto,
+  montarRotuloDoBotaoFiltrar,
+} = require('../js/logica/utilidades.js');
 
 const COR_NEUTRA = '#cbbfb4';
 
@@ -43,6 +48,12 @@ test('todas as cores do catálogo inicial são reconhecidas', () => {
   const coresDoCatalogo = globalThis.Loja.dadosIniciais.produtos.flatMap((produto) => produto.cores);
   const coresSemMapa = coresDoCatalogo.filter((nomeCor) => obterFundoDaCor(nomeCor).includes(COR_NEUTRA));
   assert.deepEqual(coresSemMapa, []);
+});
+
+test('botão de filtros mostra a quantidade de filtros ativos no painel', () => {
+  assert.equal(montarRotuloDoBotaoFiltrar(0), 'Filtrar');
+  assert.equal(montarRotuloDoBotaoFiltrar(1), 'Filtrar (1)');
+  assert.equal(montarRotuloDoBotaoFiltrar(2), 'Filtrar (2)');
 });
 
 test('foto de img/produtos gera o srcset com as versões otimizadas', () => {

@@ -185,23 +185,23 @@ button {
 /* ---------- Apresentação ---------- */
 
 .apresentacao {
-  padding: 22px var(--margem-direita) 10px var(--margem-esquerda);
+  padding: 12px var(--margem-direita) 8px var(--margem-esquerda);
   text-align: center;
 }
 
 .apresentacao h1 {
   margin: 0;
   font-family: var(--fonte-titulo);
-  font-size: 32px;
+  font-size: 26px;
   font-weight: 500;
   line-height: 1.1;
 }
 
 /* Logo completa no topo, com as bordas esfumadas para se misturar ao fundo */
 .logo-completa {
-  width: 200px;
+  width: 120px;
   height: auto;
-  margin: 0 auto 6px;
+  margin: 0 auto 4px;
   -webkit-mask-image:
     linear-gradient(to right, transparent, #000 5%, #000 95%, transparent),
     linear-gradient(to bottom, transparent, #000 5%, #000 95%, transparent);
@@ -213,14 +213,14 @@ button {
 }
 
 .apresentacao p {
-  margin: 8px 0 0;
+  margin: 4px 0 0;
   color: var(--cor-texto-suave);
   font-size: 14px;
 }
 
 .selo-minimo {
   display: inline-block;
-  margin-top: 12px;
+  margin-top: 8px;
   padding: 6px 14px;
   border-radius: var(--raio-pequeno);
   border: 1px solid rgba(201, 162, 75, 0.45);
@@ -235,7 +235,17 @@ button {
 /* ---------- Filtros ---------- */
 
 .filtros {
-  padding: 8px 0 4px;
+  padding: 4px 0;
+}
+
+/* Tamanho e cor: com o painel aberto, todas as opções ficam visíveis sem rolagem lateral */
+.painel-filtros {
+  padding-bottom: 4px;
+}
+
+.painel-filtros .lista-chips {
+  flex-wrap: wrap;
+  overflow-x: visible;
 }
 
 .grupo-filtro {
@@ -286,10 +296,17 @@ button {
   transition: background 0.15s, border-color 0.15s, color 0.15s;
 }
 
-.chip[aria-pressed='true'] {
+/* Opção ativa discreta: o preenchimento dourado fica reservado para as ações principais */
+.chip[aria-pressed='true'],
+.chip[aria-expanded='true'] {
   border-color: var(--cor-destaque);
-  background: var(--cor-destaque);
-  color: var(--cor-sobre-destaque);
+  background: var(--cor-destaque-claro);
+  color: var(--cor-destaque-realce);
+}
+
+.icone-filtrar {
+  width: 16px;
+  height: 16px;
 }
 
 .bolinha-cor {
@@ -307,6 +324,20 @@ button {
   padding: 4px var(--margem-direita) 10px var(--margem-esquerda);
   color: var(--cor-texto-suave);
   font-size: 13px;
+}
+
+.barra-resultados-acoes {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.barra-resultados-acoes .chip {
+  color: var(--cor-texto);
+}
+
+.barra-resultados-acoes .chip[aria-expanded='true'] {
+  color: var(--cor-destaque-realce);
 }
 
 .botao-texto {
@@ -355,24 +386,24 @@ button {
   transition: transform 0.5s ease;
 }
 
-.cartao-produto-categoria {
-  margin-top: 10px;
-  color: var(--cor-texto-suave);
-  font-size: 11px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
+/* Nome em até duas linhas: o completo aparece na janela do produto */
 .cartao-produto-nome {
-  margin: 2px 0 0;
+  display: -webkit-box;
+  margin: 10px 0 6px;
+  overflow: hidden;
   font-family: var(--fonte-titulo);
   font-size: 18px;
   font-weight: 600;
   line-height: 1.2;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
 }
 
+/* A margem automática mantém os preços alinhados na base de cada fileira */
 .cartao-produto-preco {
-  margin-top: 4px;
+  margin-top: auto;
+  color: var(--cor-destaque-realce);
   font-weight: 600;
 }
 
@@ -381,10 +412,23 @@ button {
   font-weight: 400;
 }
 
+.cartao-produto .moldura-foto {
+  position: relative;
+}
+
+/* Cores sobre a foto, com fundo escuro para aparecerem em qualquer imagem */
 .cartao-produto-cores {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
   display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 4px;
-  margin-top: 6px;
+  max-width: calc(100% - 16px);
+  padding: 4px 6px;
+  border-radius: var(--raio-pequeno);
+  background: rgba(12, 13, 16, 0.72);
 }
 
 .cartao-produto-cores .bolinha-cor {
@@ -1547,7 +1591,7 @@ fieldset.campo legend {
   }
 
   .apresentacao h1 {
-    font-size: 28px;
+    font-size: 23px;
   }
 
   .grade-produtos {
@@ -1577,16 +1621,12 @@ fieldset.campo legend {
 
 @media (max-height: 500px) and (orientation: landscape) {
   .apresentacao {
-    padding-top: 12px;
-  }
-
-  .apresentacao h1 br {
-    display: none;
+    padding-top: 8px;
   }
 
   /* seletor mais específico para vencer o tamanho de telas largas, que vem depois */
   .apresentacao .logo-completa {
-    width: 120px;
+    width: 80px;
   }
 
   /* Com pouca altura a janela rola por inteiro, em vez de espremer a lista entre cabeçalho e rodapé */
@@ -1623,15 +1663,15 @@ fieldset.campo legend {
   }
 
   .apresentacao {
-    padding-top: 32px;
+    padding-top: 16px;
   }
 
   .logo-completa {
-    width: 260px;
+    width: 150px;
   }
 
   .apresentacao h1 {
-    font-size: 44px;
+    font-size: 34px;
   }
 
   .janela {
@@ -1752,6 +1792,7 @@ fieldset.campo legend {
 
   .grade-produtos,
   .filtros,
+  .painel-filtros,
   .barra-resultados {
     max-width: 1200px;
     margin-right: auto;
@@ -1766,11 +1807,11 @@ fieldset.campo legend {
 /* No tablet deitado a altura é curta: apresentação mais baixa para os produtos aparecerem antes */
 @media (min-width: 1024px) and (max-height: 820px) {
   .apresentacao {
-    padding-top: 20px;
+    padding-top: 12px;
   }
 
   .apresentacao h1 {
-    font-size: 38px;
+    font-size: 30px;
   }
 
   .grupo-filtro {
