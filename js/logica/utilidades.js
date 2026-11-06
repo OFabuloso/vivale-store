@@ -5,6 +5,9 @@
 (function (raiz) {
   'use strict';
 
+  // Larguras (em pixels) das versões otimizadas das fotos de produtos
+  const LARGURAS_FOTO_OTIMIZADA = [400, 600];
+
   const formatadorReal = new Intl.NumberFormat('pt-BR', {
     style: 'currency',
     currency: 'BRL',
@@ -159,6 +162,19 @@
     return `linear-gradient(90deg, ${fatias.join(', ')})`;
   }
 
+  /**
+   * Monta o "srcset" com as versões em WebP de uma foto de img/produtos/ (geradas por
+   * "npm run otimizar-fotos"). Links externos e fotos em Base64 não têm versões: devolve ''.
+   */
+  function montarSrcsetDaFoto(enderecoFoto) {
+    const correspondencia = /^img\/produtos\/([\w-]+)\.jpe?g$/i.exec(String(enderecoFoto || ''));
+    if (!correspondencia) return '';
+    const nomeDaFoto = correspondencia[1];
+    return LARGURAS_FOTO_OTIMIZADA.map(
+      (largura) => `img/produtos/otimizadas/${nomeDaFoto}-${largura}.webp ${largura}w`,
+    ).join(', ');
+  }
+
   /** Gera uma imagem SVG elegante para produtos sem foto. */
   function gerarImagemPlaceholder(nomeProduto, nomeCor) {
     const corFundo = obterHexDaCor(nomeCor);
@@ -187,6 +203,8 @@
     normalizarTexto,
     obterHexDaCor,
     obterFundoDaCor,
+    LARGURAS_FOTO_OTIMIZADA,
+    montarSrcsetDaFoto,
     gerarImagemPlaceholder,
   };
 

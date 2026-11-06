@@ -5,6 +5,10 @@
   "description": "E-commerce B2B de moda feminina no atacado, sem banco de dados (LocalStorage + WhatsApp).",
   "scripts": {
     "test": "node --test tests/",
-    "start": "python3 -m http.server 8080"
+    "start": "python3 -m http.server 8080",
+    "otimizar-fotos": "node ferramentas/otimizar-fotos.js"
+  },
+  "devDependencies": {
+    "sharp": "0.33.5"
   }
 }

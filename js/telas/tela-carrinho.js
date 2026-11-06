@@ -8,6 +8,9 @@
   const { armazenamento, carrinho, utilidades, componentes } = raiz.Loja;
   const { formatarMoeda, escaparHtml } = utilidades;
 
+  // Largura da miniatura de cada item (ver .item-carrinho img em estilos.css)
+  const TAMANHO_FOTO_ITEM = '64px';
+
   const elementos = {};
 
   function iniciar() {
@@ -197,7 +200,7 @@
         cores: [item.cor],
         foto: '',
       };
-      componentes.aplicarFotoComReserva(elementoImagem, produto);
+      componentes.aplicarFotoComReserva(elementoImagem, produto, TAMANHO_FOTO_ITEM);
     });
   }
 

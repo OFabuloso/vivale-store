@@ -1,7 +1,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 
-const { obterHexDaCor, obterFundoDaCor } = require('../js/logica/utilidades.js');
+const { obterHexDaCor, obterFundoDaCor, montarSrcsetDaFoto } = require('../js/logica/utilidades.js');
 
 const COR_NEUTRA = '#cbbfb4';
 
@@ -43,4 +43,24 @@ test('todas as cores do catálogo inicial são reconhecidas', () => {
   const coresDoCatalogo = globalThis.Loja.dadosIniciais.produtos.flatMap((produto) => produto.cores);
   const coresSemMapa = coresDoCatalogo.filter((nomeCor) => obterFundoDaCor(nomeCor).includes(COR_NEUTRA));
   assert.deepEqual(coresSemMapa, []);
+});
+
+test('foto de img/produtos gera o srcset com as versões otimizadas', () => {
+  assert.equal(
+    montarSrcsetDaFoto('img/produtos/produto-01.jpeg'),
+    'img/produtos/otimizadas/produto-01-400.webp 400w, img/produtos/otimizadas/produto-01-600.webp 600w',
+  );
+  assert.equal(
+    montarSrcsetDaFoto('img/produtos/vestido_novo.JPG'),
+    'img/produtos/otimizadas/vestido_novo-400.webp 400w, img/produtos/otimizadas/vestido_novo-600.webp 600w',
+  );
+});
+
+test('foto sem versões otimizadas não gera srcset', () => {
+  assert.equal(montarSrcsetDaFoto('https://exemplo.com/img/produtos/produto-01.jpeg'), '');
+  assert.equal(montarSrcsetDaFoto('data:image/jpeg;base64,AAAA'), '');
+  assert.equal(montarSrcsetDaFoto('img/produtos/produto-01.png'), '');
+  assert.equal(montarSrcsetDaFoto('img/produtos/com espaço.jpeg'), '');
+  assert.equal(montarSrcsetDaFoto(''), '');
+  assert.equal(montarSrcsetDaFoto(undefined), '');
 });

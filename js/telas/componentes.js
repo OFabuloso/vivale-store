@@ -4,7 +4,7 @@
 (function (raiz) {
   'use strict';
 
-  const { gerarImagemPlaceholder } = raiz.Loja.utilidades;
+  const { gerarImagemPlaceholder, montarSrcsetDaFoto } = raiz.Loja.utilidades;
 
   let temporizadorToast = null;
 
@@ -28,13 +28,34 @@
     return gerarImagemPlaceholder(produto ? produto.nome : '?', produto ? produto.cores[0] : '');
   }
 
-  /** Troca por uma imagem ilustrativa caso o link da foto esteja quebrado. */
-  function aplicarFotoComReserva(elementoImagem, produto) {
+  /**
+   * Aplica a foto do produto. Com "tamanhosExibidos" (atributo "sizes"), usa as versões otimizadas.
+   * Se elas faltarem, volta para a foto original; se esta também falhar, usa a imagem ilustrativa.
+   */
+  function aplicarFotoComReserva(elementoImagem, produto, tamanhosExibidos = '') {
+    const fotoOriginal = obterFotoProduto(produto);
+    const srcset = tamanhosExibidos ? montarSrcsetDaFoto(fotoOriginal) : '';
+
     elementoImagem.onerror = () => {
+      if (elementoImagem.hasAttribute('srcset')) {
+        elementoImagem.removeAttribute('srcset');
+        elementoImagem.removeAttribute('sizes');
+        elementoImagem.src = fotoOriginal;
+        return;
+      }
       elementoImagem.onerror = null;
       elementoImagem.src = gerarImagemPlaceholder(produto.nome, produto.cores[0]);
     };
-    elementoImagem.src = obterFotoProduto(produto);
+
+    // O "sizes" vem antes do "srcset" para o navegador já escolher a versão certa
+    if (srcset) {
+      elementoImagem.sizes = tamanhosExibidos;
+      elementoImagem.srcset = srcset;
+    } else {
+      elementoImagem.removeAttribute('srcset');
+      elementoImagem.removeAttribute('sizes');
+    }
+    elementoImagem.src = fotoOriginal;
   }
 
   /** Fecha as janelas (dialog) ao clicar no "×" ou fora do conteúdo. */

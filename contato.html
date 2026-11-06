@@ -20,7 +20,10 @@
   <body>
     <main class="escolha-contato">
       <a href="index.html" aria-label="Voltar para a loja">
-        <img class="logo-completa" src="img/marca/logo.jpeg" alt="Vivale Store" width="600" height="632" />
+        <picture>
+          <source type="image/webp" srcset="img/marca/logo-400.webp 400w, img/marca/logo-600.webp 600w" sizes="(min-width: 640px) 180px, 150px" />
+          <img class="logo-completa" src="img/marca/logo.jpeg" alt="Vivale Store" width="600" height="632" fetchpriority="high" />
+        </picture>
       </a>
       <p class="escolha-contato-sobretitulo">Finalizar pedido</p>
       <h1>Escolha o atendimento</h1>

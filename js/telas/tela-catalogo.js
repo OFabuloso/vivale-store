@@ -10,6 +10,9 @@
   // Ordem de exibição dos tamanhos nos filtros
   const ORDEM_TAMANHOS = ['PP', 'P', 'M', 'G', 'GG', 'XG', 'U'];
 
+  // Largura do cartão em cada faixa de tela: 2 colunas, 3 colunas (640px) e 4 colunas (1024px)
+  const TAMANHOS_FOTO_CARTAO = '(min-width: 1024px) 290px, (min-width: 640px) 33vw, 50vw';
+
   const filtrosAtivos = { categoria: null, tamanho: null, cor: null };
   const escolhaAtual = { produto: null, tamanho: null, cor: null };
   const elementos = {};
@@ -164,7 +167,7 @@
 
     elementos.grade.innerHTML = produtosFiltrados.map(montarHtmlCartao).join('');
     elementos.grade.querySelectorAll('img[data-id]').forEach((elementoImagem, posicao) => {
-      componentes.aplicarFotoComReserva(elementoImagem, produtosFiltrados[posicao]);
+      componentes.aplicarFotoComReserva(elementoImagem, produtosFiltrados[posicao], TAMANHOS_FOTO_CARTAO);
     });
   }
 
