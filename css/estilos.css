@@ -670,7 +670,7 @@ button {
 
 /* Zoom só para quem usa mouse: em tela de toque não existe "passar por cima" */
 @media (hover: hover) and (pointer: fine) {
-  /* Cartão em destaque: a moldura cresce 30% por cima dos vizinhos e a foto amplia 12% dentro dela.
+  /* Cartão em destaque: a moldura cresce 8% e a foto amplia 12% dentro dela.
      O ponto de partida (transform-origin) vem de tela-catalogo.js para não sair da tela nas bordas. */
   .cartao-produto .moldura-foto {
     transition: transform 0.35s ease, box-shadow 0.35s ease;
@@ -680,8 +680,15 @@ button {
     z-index: 5;
   }
 
+  /* Nome e preço ficam acima da sombra da moldura ampliada, sem escurecer */
+  .cartao-produto:hover .cartao-produto-nome,
+  .cartao-produto:hover .cartao-produto-preco {
+    position: relative;
+    z-index: 1;
+  }
+
   .cartao-produto:hover .moldura-foto {
-    transform: scale(1.3);
+    transform: scale(1.08);
     box-shadow: 0 0 0 1px rgba(var(--cor-destaque-rgb), 0.6), var(--sombra);
   }
 

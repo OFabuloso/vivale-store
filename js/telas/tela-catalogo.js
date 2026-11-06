@@ -184,9 +184,11 @@
     });
   }
 
-  // A moldura do cartão cresce 30% ao passar o mouse (ver estilos.css)
-  const AUMENTO_DO_DESTAQUE = 0.3;
+  // A moldura do cartão cresce 8% ao passar o mouse (ver estilos.css)
+  const AUMENTO_DO_DESTAQUE = 0.08;
   const FOLGA_DA_BORDA = 8;
+  // Ponto de crescimento na altura: a moldura sobe mais do que desce, para não cobrir o nome
+  const ORIGEM_VERTICAL_DO_DESTAQUE = '70%';
 
   /**
    * Cartões perto da borda da tela crescem para dentro da página,
@@ -204,7 +206,7 @@
     let origemHorizontal = 'center';
     if (area.left - crescimentoDeCadaLado < FOLGA_DA_BORDA) origemHorizontal = 'left';
     else if (area.right + crescimentoDeCadaLado > larguraDaTela - FOLGA_DA_BORDA) origemHorizontal = 'right';
-    moldura.style.transformOrigin = `${origemHorizontal} center`;
+    moldura.style.transformOrigin = `${origemHorizontal} ${ORIGEM_VERTICAL_DO_DESTAQUE}`;
   }
 
   /** Lupa da foto do produto: o zoom (feito no CSS) parte do ponto onde está o mouse. */
