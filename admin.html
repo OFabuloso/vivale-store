@@ -18,30 +18,12 @@
     <link rel="stylesheet" href="css/estilos.css" />
   </head>
   <body>
-    <!-- Login -->
-    <section class="tela-login" id="tela-login">
-      <form class="cartao" id="formulario-login" novalidate>
-        <h1>Área do Vendedor</h1>
-        <p id="texto-login">Digite a senha para gerenciar o catálogo.</p>
-        <div class="campo">
-          <label for="campo-senha">Senha</label>
-          <input type="password" id="campo-senha" autocomplete="current-password" required />
-        </div>
-        <p class="mensagem-erro oculto" id="erro-login"></p>
-        <button class="botao botao-primario botao-largo" id="botao-entrar" type="submit">Entrar</button>
-        <div class="acoes-centralizadas">
-          <a class="botao-texto" href="index.html">Voltar para a loja</a>
-        </div>
-      </form>
-    </section>
-
-    <!-- Painel -->
-    <div class="oculto" id="painel-admin">
+    <!-- Painel (o acesso é protegido pelo servidor: usuário e senha do .htaccess) -->
+    <div id="painel-admin">
       <header class="cabecalho">
         <a class="logo" href="index.html"><img class="logo-monograma" src="img/marca/monograma.png" alt="" width="36" height="36" />Vivale <span>Admin</span></a>
         <div class="grupo-botoes">
           <a class="botao botao-contorno botao-pequeno" href="index.html" target="_blank" rel="noopener">Ver loja</a>
-          <button class="botao botao-contorno botao-pequeno" id="botao-sair" type="button">Sair</button>
         </div>
       </header>
 
@@ -78,14 +60,10 @@
 
           <form class="cartao secao-config" id="formulario-configuracao" novalidate>
             <h2>Configurações da loja</h2>
-            <p>Valem para o carrinho e para o acesso a este painel.</p>
+            <p>Valem para o carrinho.</p>
             <div class="campo">
               <label for="campo-valor-minimo">Valor mínimo de compra (R$)</label>
               <input type="text" id="campo-valor-minimo" inputmode="decimal" placeholder="300,00" />
-            </div>
-            <div class="campo">
-              <label for="campo-nova-senha">Nova senha do painel (opcional)</label>
-              <input type="password" id="campo-nova-senha" autocomplete="new-password" placeholder="Deixe em branco para manter" />
             </div>
             <p class="mensagem-erro oculto" id="erro-configuracao"></p>
             <button class="botao botao-primario botao-largo" type="submit">Salvar configurações</button>

@@ -73,3 +73,16 @@ test('salva e recupera a lista de contatos editada', () => {
   armazenamento.salvarConfiguracao({ contatosWhatsApp: novosContatos });
   assert.deepEqual(armazenamento.obterConfiguracao().contatosWhatsApp, novosContatos);
 });
+
+test('apaga a senha que versões antigas guardavam no navegador', () => {
+  conteudoArmazenado.set('loja_atacado_senha_admin', JSON.stringify('senha-antiga'));
+  conteudoArmazenado.set(
+    armazenamento.CHAVES.configuracao,
+    JSON.stringify({ valorMinimo: 300, senhaAdmin: 'senha-mais-antiga' }),
+  );
+
+  armazenamento.removerSenhaAntiga();
+
+  assert.equal(conteudoArmazenado.has('loja_atacado_senha_admin'), false);
+  assert.deepEqual(JSON.parse(conteudoArmazenado.get(armazenamento.CHAVES.configuracao)), { valorMinimo: 300 });
+});

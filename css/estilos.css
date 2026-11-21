@@ -1207,15 +1207,6 @@ fieldset.campo legend {
 
 /* ---------- Admin ---------- */
 
-.tela-login {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 100vh;
-  min-height: 100dvh;
-  padding: 16px var(--margem-direita) 16px var(--margem-esquerda);
-}
-
 .cartao {
   width: 100%;
   max-width: 420px;

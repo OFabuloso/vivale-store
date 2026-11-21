@@ -11,7 +11,8 @@
     observacoes: 'loja_atacado_observacoes',
     configuracao: 'loja_atacado_configuracao',
     versaoDados: 'loja_atacado_versao_dados',
-    senhaAdmin: 'loja_atacado_senha_admin',
+    // Usada por versões antigas que tinham senha no navegador; só existe para ser apagada
+    senhaAdminAntiga: 'loja_atacado_senha_admin',
   };
 
   /** Lê e converte um JSON do LocalStorage; devolve o valor padrão se não existir ou estiver corrompido. */
@@ -50,7 +51,7 @@
    * (Comparar "maior que" evita que o Admin perca edições feitas após exportar.)
    */
   function inicializar() {
-    migrarSenhaAntiga();
+    removerSenhaAntiga();
     const dadosIniciais = raiz.Loja.dadosIniciais;
     const versaoSalva = lerJson(CHAVES.versaoDados, null);
     const produtosSalvos = lerJson(CHAVES.produtos, null);
@@ -148,25 +149,16 @@
     salvarJson(CHAVES.configuracao, { ...obterConfiguracao(), ...novaConfiguracao });
   }
 
-  // ---------- Senha do painel ----------
+  // ---------- Senha antiga do painel ----------
 
   /**
-   * A senha fica numa chave separada, só neste navegador: não é exportada
-   * nem apagada ao restaurar os dados de exemplo. Retorna null se ainda não foi criada.
+   * O painel agora é protegido pelo servidor. Apaga a senha que versões antigas
+   * guardavam no navegador (numa chave própria ou junto das configurações).
    */
-  function obterSenhaAdmin() {
-    return lerJson(CHAVES.senhaAdmin, null) || null;
-  }
-
-  function salvarSenhaAdmin(novaSenha) {
-    salvarJson(CHAVES.senhaAdmin, novaSenha);
-  }
-
-  /** Versões antigas guardavam a senha junto das configurações; move para a chave própria. */
-  function migrarSenhaAntiga() {
+  function removerSenhaAntiga() {
+    localStorage.removeItem(CHAVES.senhaAdminAntiga);
     const configuracaoAntiga = lerJson(CHAVES.configuracao, {});
     if (!configuracaoAntiga || !configuracaoAntiga.senhaAdmin) return;
-    if (!obterSenhaAdmin()) salvarSenhaAdmin(configuracaoAntiga.senhaAdmin);
     delete configuracaoAntiga.senhaAdmin;
     salvarJson(CHAVES.configuracao, configuracaoAntiga);
   }
@@ -211,8 +203,7 @@
     salvarObservacoes,
     obterConfiguracao,
     salvarConfiguracao,
-    obterSenhaAdmin,
-    salvarSenhaAdmin,
+    removerSenhaAntiga,
     gerarArquivoDadosIniciais,
   };
 })(window);

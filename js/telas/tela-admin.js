@@ -1,8 +1,8 @@
 /**
- * Painel do Vendedor: login simples, CRUD de produtos, contatos do WhatsApp e configurações da loja.
+ * Painel do Vendedor: CRUD de produtos, contatos do WhatsApp e configurações da loja.
  *
- * ATENÇÃO: a senha é validada no próprio navegador. Isso apenas esconde o painel
- * de clientes curiosas; não é uma proteção real (qualquer pessoa pode ler o código).
+ * O acesso é protegido pelo servidor (usuário e senha no .htaccess), antes de a página
+ * carregar. Por isso o painel não tem login próprio e abre direto.
  */
 (function (raiz) {
   'use strict';
@@ -10,14 +10,11 @@
   const { armazenamento, utilidades, componentes, imagem, contatos } = raiz.Loja;
   const { formatarMoeda, escaparHtml, lerValorMonetario, gerarId } = utilidades;
 
-  const CHAVE_SESSAO = 'loja_atacado_admin_logado';
   const elementos = {};
   let idProdutoEmEdicao = null;
   let fotoAtual = '';
 
   function iniciar() {
-    elementos.telaLogin = document.getElementById('tela-login');
-    elementos.painel = document.getElementById('painel-admin');
     elementos.listaProdutos = document.getElementById('lista-produtos-admin');
     elementos.totalProdutos = document.getElementById('total-produtos');
     elementos.janelaProduto = document.getElementById('janela-formulario-produto');
@@ -37,9 +34,6 @@
     elementos.campoCores = document.getElementById('produto-cores');
     elementos.campoAtivo = document.getElementById('produto-ativo');
 
-    prepararTelaLogin();
-    document.getElementById('formulario-login').addEventListener('submit', entrar);
-    document.getElementById('botao-sair').addEventListener('click', sair);
     document.querySelectorAll('.aba').forEach((aba) => aba.addEventListener('click', trocarAba));
 
     document.getElementById('botao-novo-produto').addEventListener('click', () => abrirFormulario(null));
@@ -63,66 +57,6 @@
     document.getElementById('botao-exportar').addEventListener('click', exportarCatalogo);
     document.getElementById('botao-restaurar').addEventListener('click', restaurarExemplo);
 
-    if (sessionStorage.getItem(CHAVE_SESSAO) === 'sim') {
-      mostrarPainel();
-    }
-  }
-
-  // ---------- Autenticação simples ----------
-
-  const TAMANHO_MINIMO_SENHA = 6;
-
-  /** Sem senha cadastrada neste navegador, o login vira a criação da senha (primeiro acesso). */
-  function prepararTelaLogin() {
-    const primeiroAcesso = armazenamento.obterSenhaAdmin() === null;
-    document.getElementById('texto-login').textContent = primeiroAcesso
-      ? `Primeiro acesso neste navegador: crie a senha do painel (mínimo ${TAMANHO_MINIMO_SENHA} caracteres).`
-      : 'Digite a senha para gerenciar o catálogo.';
-    document.getElementById('botao-entrar').textContent = primeiroAcesso ? 'Criar senha e entrar' : 'Entrar';
-    document
-      .getElementById('campo-senha')
-      .setAttribute('autocomplete', primeiroAcesso ? 'new-password' : 'current-password');
-  }
-
-  function mostrarErroLogin(mensagem) {
-    const elementoErro = document.getElementById('erro-login');
-    elementoErro.textContent = mensagem;
-    elementoErro.classList.remove('oculto');
-  }
-
-  function entrar(evento) {
-    evento.preventDefault();
-    const campoSenha = document.getElementById('campo-senha');
-    const senhaCorreta = armazenamento.obterSenhaAdmin();
-
-    if (senhaCorreta === null) {
-      if (campoSenha.value.length < TAMANHO_MINIMO_SENHA) {
-        mostrarErroLogin(`A senha precisa ter pelo menos ${TAMANHO_MINIMO_SENHA} caracteres.`);
-        return;
-      }
-      armazenamento.salvarSenhaAdmin(campoSenha.value);
-    } else if (campoSenha.value !== senhaCorreta) {
-      mostrarErroLogin('Senha incorreta.');
-      campoSenha.select();
-      return;
-    }
-
-    sessionStorage.setItem(CHAVE_SESSAO, 'sim');
-    campoSenha.value = '';
-    document.getElementById('erro-login').classList.add('oculto');
-    mostrarPainel();
-  }
-
-  function sair() {
-    sessionStorage.removeItem(CHAVE_SESSAO);
-    prepararTelaLogin();
-    elementos.painel.classList.add('oculto');
-    elementos.telaLogin.classList.remove('oculto');
-  }
-
-  function mostrarPainel() {
-    elementos.telaLogin.classList.add('oculto');
-    elementos.painel.classList.remove('oculto');
     renderizarProdutos();
     preencherConfiguracoes();
   }
@@ -399,13 +333,10 @@
     evento.preventDefault();
     const elementoErro = document.getElementById('erro-configuracao');
     const valorMinimo = lerValorMonetario(document.getElementById('campo-valor-minimo').value || '0');
-    const campoNovaSenha = document.getElementById('campo-nova-senha');
 
     let mensagemErro = '';
     if (!Number.isFinite(valorMinimo) || valorMinimo < 0) {
       mensagemErro = 'Informe um valor mínimo válido (ex.: 300,00).';
-    } else if (campoNovaSenha.value && campoNovaSenha.value.length < TAMANHO_MINIMO_SENHA) {
-      mensagemErro = `A nova senha precisa ter pelo menos ${TAMANHO_MINIMO_SENHA} caracteres.`;
     }
 
     elementoErro.textContent = mensagemErro;
@@ -415,8 +346,6 @@
     armazenamento.salvarConfiguracao({
       valorMinimo: Math.round(valorMinimo * 100) / 100,
     });
-    if (campoNovaSenha.value) armazenamento.salvarSenhaAdmin(campoNovaSenha.value);
-    campoNovaSenha.value = '';
     preencherConfiguracoes();
     componentes.mostrarToast('Configurações salvas');
   }
@@ -437,8 +366,7 @@
 
   function restaurarExemplo() {
     const confirmou = confirm(
-      'Isso apaga os produtos e configurações deste navegador e volta aos dados de exemplo ' +
-        '(a senha do painel é mantida). Continuar?',
+      'Isso apaga os produtos e configurações deste navegador e volta aos dados de exemplo. Continuar?',
     );
     if (!confirmou) return;
     armazenamento.restaurarDadosIniciais();
