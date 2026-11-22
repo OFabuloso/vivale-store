@@ -1,0 +1,8 @@
+# O login do painel (sessao.php) fica atrás da mesma senha do servidor do admin.html.
+# O catálogo público (catalogo.php) e as fotos (foto.php) continuam abertos às clientes.
+<Files "sessao.php">
+  AuthType Basic
+  AuthName "Area do Vendedor"
+  AuthUserFile /home/u151095779/domains/vivalestore.com.br/.htpasswd
+  Require valid-user
+</Files>

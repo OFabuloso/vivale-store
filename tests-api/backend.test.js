@@ -1,0 +1,363 @@
+/**
+ * Testes de integração do backend contra o ambiente local do Docker.
+ *
+ * Uso:
+ *   docker compose up -d --build
+ *   npm run test:api
+ *
+ * Os testes criam o usuário "teste-painel" e apagam as tentativas de login entre um caso e outro.
+ */
+const { test, before, beforeEach } = require('node:test');
+const assert = require('node:assert/strict');
+const { execFileSync } = require('node:child_process');
+const path = require('node:path');
+const sharp = require('sharp');
+
+const ENDERECO_BASE = process.env.ENDERECO_API || 'http://localhost:8081';
+const USUARIO_TESTE = 'teste-painel';
+const SENHA_TESTE = 'senha-de-teste-123';
+// Senha do .htpasswd do ambiente local (docker/dev/.htpasswd)
+const SENHA_DO_SERVIDOR = `Basic ${Buffer.from('teste:teste-local').toString('base64')}`;
+const RAIZ_DO_PROJETO = path.join(__dirname, '..');
+
+function rodarNoDocker(servico, comando, entrada = '') {
+  return execFileSync('docker', ['compose', 'exec', '-T', servico, ...comando], {
+    cwd: RAIZ_DO_PROJETO,
+    input: entrada,
+    encoding: 'utf8',
+  });
+}
+
+function rodarSql(sql) {
+  return rodarNoDocker('banco', ['mariadb', '-uvivale', '-pvivale-local', 'vivale', '-N', '-e', sql]);
+}
+
+/** Navegador simplificado: guarda o cookie de sessão e o token CSRF entre as requisições. */
+function criarNavegador({ comSenhaDoServidor = true } = {}) {
+  let cookieDeSessao = '';
+  let tokenCsrf = '';
+
+  async function requisitar(caminho, { metodo = 'GET', corpo, enviarCsrf = true, cabecalhos = {} } = {}) {
+    const cabecalhosFinais = { ...cabecalhos };
+    if (comSenhaDoServidor) cabecalhosFinais.Authorization = SENHA_DO_SERVIDOR;
+    if (cookieDeSessao) cabecalhosFinais.Cookie = cookieDeSessao;
+    if (metodo !== 'GET' && enviarCsrf) cabecalhosFinais['X-CSRF-Token'] = tokenCsrf;
+    let corpoEnviado = corpo;
+    if (corpo !== undefined && !(corpo instanceof FormData)) {
+      cabecalhosFinais['Content-Type'] = 'application/json';
+      corpoEnviado = JSON.stringify(corpo);
+    }
+
+    const resposta = await fetch(`${ENDERECO_BASE}/${caminho}`, {
+      method: metodo,
+      headers: cabecalhosFinais,
+      body: corpoEnviado,
+      redirect: 'manual',
+    });
+    const cookieRecebido = resposta.headers.get('set-cookie');
+    if (cookieRecebido) cookieDeSessao = cookieRecebido.split(';')[0];
+    const tipo = resposta.headers.get('content-type') || '';
+    const dados = tipo.includes('json') ? await resposta.json() : null;
+    if (dados && dados.tokenCsrf) tokenCsrf = dados.tokenCsrf;
+    return { status: resposta.status, dados, resposta };
+  }
+
+  async function entrar(usuario = USUARIO_TESTE, senha = SENHA_TESTE) {
+    await requisitar('api/sessao.php');
+    return requisitar('api/sessao.php', { metodo: 'POST', corpo: { usuario, senha } });
+  }
+
+  return { requisitar, entrar };
+}
+
+before(() => {
+  rodarNoDocker('web', ['php', 'ferramentas/criar-usuario.php', USUARIO_TESTE, 'Teste do Painel'], `${SENHA_TESTE}\n`);
+});
+
+beforeEach(() => {
+  rodarSql('DELETE FROM tentativas_login');
+});
+
+// ---------- Catálogo público ----------
+
+test('o catálogo público traz os produtos ativos e só os contatos ligados', async () => {
+  rodarSql(
+    "INSERT INTO contatos (id, nome, numero, ativo, ordem) VALUES ('contato-teste-off', 'Desligado', '5521900001111', 0, 9) " +
+      'ON DUPLICATE KEY UPDATE ativo = 0',
+  );
+  const navegador = criarNavegador({ comSenhaDoServidor: false });
+  const { status, dados } = await navegador.requisitar('api/catalogo.php');
+
+  assert.equal(status, 200);
+  assert.ok(dados.produtos.length > 0);
+  assert.ok(dados.produtos.every((produto) => produto.ativo === true));
+  assert.ok(Array.isArray(dados.produtos[0].tamanhos));
+  assert.ok(dados.configuracao.contatosWhatsApp.every((contato) => contato.ativo === true));
+  assert.ok(!dados.configuracao.contatosWhatsApp.some((contato) => contato.id === 'contato-teste-off'));
+  assert.equal(typeof dados.configuracao.valorMinimo, 'number');
+  rodarSql("DELETE FROM contatos WHERE id = 'contato-teste-off'");
+});
+
+// ---------- Login ----------
+
+test('login e API do painel exigem a senha do servidor (.htpasswd)', async () => {
+  const semSenhaDoServidor = criarNavegador({ comSenhaDoServidor: false });
+  assert.equal((await semSenhaDoServidor.requisitar('api/sessao.php')).status, 401);
+  assert.equal((await semSenhaDoServidor.requisitar('api/admin/painel.php')).status, 401);
+  assert.equal((await semSenhaDoServidor.requisitar('admin.html')).status, 401);
+});
+
+test('sem login, a API do painel responde 401', async () => {
+  const navegador = criarNavegador();
+  const { status, dados } = await navegador.requisitar('api/admin/painel.php');
+  assert.equal(status, 401);
+  assert.match(dados.erro, /login/);
+});
+
+test('login com senha certa abre o painel; senha errada não', async () => {
+  const navegadorErrado = criarNavegador();
+  const tentativaErrada = await navegadorErrado.entrar(USUARIO_TESTE, 'senha-errada');
+  assert.equal(tentativaErrada.status, 401);
+  assert.equal(tentativaErrada.dados.erro, 'Usuário ou senha incorretos.');
+
+  const usuarioInexistente = await navegadorErrado.entrar('nao-existe', 'qualquer');
+  assert.equal(usuarioInexistente.dados.erro, 'Usuário ou senha incorretos.');
+
+  const navegador = criarNavegador();
+  const login = await navegador.entrar();
+  assert.equal(login.status, 200);
+  assert.equal(login.dados.usuario.usuario, USUARIO_TESTE);
+  assert.equal(login.dados.usuario.senha_hash, undefined);
+
+  const painel = await navegador.requisitar('api/admin/painel.php');
+  assert.equal(painel.status, 200);
+  assert.ok(painel.dados.produtos.length > 0);
+});
+
+test('o cookie de sessão é HttpOnly e SameSite=Strict', async () => {
+  const navegador = criarNavegador();
+  const { resposta } = await navegador.requisitar('api/sessao.php');
+  const cookie = resposta.headers.get('set-cookie');
+  assert.match(cookie, /HttpOnly/i);
+  assert.match(cookie, /SameSite=Strict/i);
+});
+
+test('bloqueia o usuário depois de 5 senhas erradas', async () => {
+  const navegador = criarNavegador();
+  for (let tentativa = 0; tentativa < 5; tentativa += 1) {
+    assert.equal((await navegador.entrar(USUARIO_TESTE, 'senha-errada')).status, 401);
+  }
+  // Nem a senha certa entra enquanto o bloqueio durar
+  const bloqueado = await navegador.entrar();
+  assert.equal(bloqueado.status, 429);
+  assert.match(bloqueado.dados.erro, /15 minutos/);
+});
+
+test('alteração sem token CSRF ou de outro site é recusada', async () => {
+  const navegador = criarNavegador();
+  await navegador.entrar();
+
+  const semToken = await navegador.requisitar('api/admin/configuracao.php', {
+    metodo: 'PUT',
+    corpo: { valorMinimo: 1 },
+    enviarCsrf: false,
+  });
+  assert.equal(semToken.status, 403);
+
+  const outroSite = await navegador.requisitar('api/admin/configuracao.php', {
+    metodo: 'PUT',
+    corpo: { valorMinimo: 1 },
+    cabecalhos: { Origin: 'https://site-malicioso.example' },
+  });
+  assert.equal(outroSite.status, 403);
+
+  const mesmoNomeOutraPorta = await navegador.requisitar('api/admin/configuracao.php', {
+    metodo: 'PUT',
+    corpo: { valorMinimo: 1 },
+    cabecalhos: { Origin: `${new URL(ENDERECO_BASE).protocol}//${new URL(ENDERECO_BASE).hostname}:9999` },
+  });
+  assert.equal(mesmoNomeOutraPorta.status, 403);
+});
+
+test('alteração vinda do próprio site (Origin com porta) é aceita', async () => {
+  const navegador = criarNavegador();
+  await navegador.entrar();
+  const valorAtual = (await navegador.requisitar('api/admin/painel.php')).dados.configuracao.valorMinimo;
+  const resposta = await navegador.requisitar('api/admin/configuracao.php', {
+    metodo: 'PUT',
+    corpo: { valorMinimo: valorAtual },
+    cabecalhos: { Origin: new URL(ENDERECO_BASE).origin },
+  });
+  assert.equal(resposta.status, 200);
+});
+
+test('depois de sair, a sessão não vale mais', async () => {
+  const navegador = criarNavegador();
+  await navegador.entrar();
+  assert.equal((await navegador.requisitar('api/sessao.php', { metodo: 'DELETE' })).status, 200);
+  assert.equal((await navegador.requisitar('api/admin/painel.php')).status, 401);
+});
+
+// ---------- Produtos, contatos e configurações ----------
+
+test('cria, edita, inativa e exclui um produto; a loja vê cada mudança na hora', async () => {
+  const navegador = criarNavegador();
+  await navegador.entrar();
+  const loja = criarNavegador({ comSenhaDoServidor: false });
+  const produtoNaLoja = async (idProduto) =>
+    (await loja.requisitar('api/catalogo.php')).dados.produtos.find((produto) => produto.id === idProduto);
+
+  const criado = await navegador.requisitar('api/admin/produtos.php', {
+    metodo: 'POST',
+    corpo: { nome: 'Vestido de Teste', categoria: 'Vestidos', preco: 89.9, tamanhos: ['P', 'XXL'], cores: ['Preto', 'Preto', ' '], descricao: '<b>leve</b>' },
+  });
+  assert.equal(criado.status, 200);
+  const { produto } = criado.dados;
+  assert.match(produto.id, /^prd-/);
+  assert.deepEqual(produto.tamanhos, ['P']);
+  assert.deepEqual(produto.cores, ['Preto']);
+  assert.equal(produto.descricao, '<b>leve</b>'); // guardado como texto; a tela escapa ao mostrar
+  assert.equal((await produtoNaLoja(produto.id)).nome, 'Vestido de Teste');
+
+  const inativado = await navegador.requisitar('api/admin/produtos.php', {
+    metodo: 'POST',
+    corpo: { ...produto, nome: 'Vestido Editado', ativo: false },
+  });
+  assert.equal(inativado.dados.produto.nome, 'Vestido Editado');
+  assert.equal(await produtoNaLoja(produto.id), undefined);
+
+  const excluido = await navegador.requisitar(`api/admin/produtos.php?id=${produto.id}`, { metodo: 'DELETE' });
+  assert.equal(excluido.status, 200);
+  const deNovo = await navegador.requisitar(`api/admin/produtos.php?id=${produto.id}`, { metodo: 'DELETE' });
+  assert.equal(deNovo.status, 404);
+});
+
+test('produto inválido é recusado com a mensagem certa', async () => {
+  const navegador = criarNavegador();
+  await navegador.entrar();
+  const casos = [
+    [{ categoria: 'Vestidos', preco: 10, tamanhos: ['P'], cores: ['Preto'] }, /nome/],
+    [{ nome: 'Vestido', categoria: 'Vestidos', preco: -1, tamanhos: ['P'], cores: ['Preto'] }, /preço/],
+    [{ nome: 'Vestido', categoria: 'Vestidos', preco: 10, tamanhos: [], cores: ['Preto'] }, /tamanho/],
+    [{ nome: 'Vestido', categoria: 'Vestidos', preco: 10, tamanhos: ['P'], cores: ['Preto'], foto: 'javascript:alert(1)' }, /foto/],
+    [{ nome: 'Vestido', categoria: 'Vestidos', preco: 10, tamanhos: ['P'], cores: ['Preto'], foto: 'data:image/png;base64,AAAA' }, /foto/],
+    [{ id: "x' OR 1=1 --", nome: 'Vestido', categoria: 'Vestidos', preco: 10, tamanhos: ['P'], cores: ['Preto'] }, /Identificador/],
+  ];
+  for (const [produto, mensagemEsperada] of casos) {
+    const { status, dados } = await navegador.requisitar('api/admin/produtos.php', { metodo: 'POST', corpo: produto });
+    assert.equal(status, 422, JSON.stringify(produto));
+    assert.match(dados.erro, mensagemEsperada);
+  }
+});
+
+test('desligar um atendente tira ele do catálogo público na hora', async () => {
+  const navegador = criarNavegador();
+  await navegador.entrar();
+  const loja = criarNavegador({ comSenhaDoServidor: false });
+  const contatosDaLoja = async () => (await loja.requisitar('api/catalogo.php')).dados.configuracao.contatosWhatsApp;
+  const contatosOriginais = (await navegador.requisitar('api/admin/painel.php')).dados.configuracao.contatosWhatsApp;
+
+  try {
+    const salvo = await navegador.requisitar('api/admin/contatos.php', {
+      metodo: 'PUT',
+      corpo: {
+        contatos: [
+          { id: 'contato-a', nome: 'Vendas', numero: '(21) 91111-2222', ativo: true },
+          { id: 'contato-b', nome: 'Gerência', numero: '21933334444', ativo: false },
+        ],
+      },
+    });
+    assert.equal(salvo.status, 200);
+    assert.equal(salvo.dados.contatosWhatsApp[0].numero, '5521911112222');
+    assert.deepEqual((await contatosDaLoja()).map((contato) => contato.nome), ['Vendas']);
+
+    await navegador.requisitar('api/admin/contatos.php', {
+      metodo: 'PUT',
+      corpo: { contatos: [{ id: 'contato-a', nome: 'Vendas', numero: '21911112222', ativo: false }] },
+    });
+    assert.deepEqual(await contatosDaLoja(), []);
+
+    const repetido = await navegador.requisitar('api/admin/contatos.php', {
+      metodo: 'PUT',
+      corpo: { contatos: [{ nome: 'A', numero: '21911112222' }, { nome: 'B', numero: '5521911112222' }] },
+    });
+    assert.equal(repetido.status, 422);
+    assert.match(repetido.dados.erro, /"B"/);
+  } finally {
+    await navegador.requisitar('api/admin/contatos.php', { metodo: 'PUT', corpo: { contatos: contatosOriginais } });
+  }
+});
+
+test('salva o valor mínimo e recusa valor inválido', async () => {
+  const navegador = criarNavegador();
+  await navegador.entrar();
+  const valorOriginal = (await navegador.requisitar('api/admin/painel.php')).dados.configuracao.valorMinimo;
+  try {
+    const salvo = await navegador.requisitar('api/admin/configuracao.php', { metodo: 'PUT', corpo: { valorMinimo: 350.5 } });
+    assert.equal(salvo.dados.valorMinimo, 350.5);
+    const invalido = await navegador.requisitar('api/admin/configuracao.php', { metodo: 'PUT', corpo: { valorMinimo: 'abc' } });
+    assert.equal(invalido.status, 422);
+  } finally {
+    await navegador.requisitar('api/admin/configuracao.php', { metodo: 'PUT', corpo: { valorMinimo: valorOriginal } });
+  }
+});
+
+// ---------- Fotos ----------
+
+/** Foto PNG pequena gerada na hora (com o sharp, já usado em ferramentas/otimizar-fotos.js). */
+function criarPngPequeno() {
+  return sharp({ create: { width: 40, height: 20, channels: 3, background: '#c49a62' } }).png().toBuffer();
+}
+
+test('envia uma foto, gera as versões e entrega pelo endereço fotos/', async () => {
+  const navegador = criarNavegador();
+  await navegador.entrar();
+  const formulario = new FormData();
+  formulario.append('foto', new Blob([await criarPngPequeno()], { type: 'image/png' }), 'foto.png');
+
+  const envio = await navegador.requisitar('api/admin/fotos.php', { metodo: 'POST', corpo: formulario });
+  assert.equal(envio.status, 201, JSON.stringify(envio.dados));
+  assert.match(envio.dados.foto, /^fotos\/[a-f0-9]{32}\.jpg$/);
+
+  const loja = criarNavegador({ comSenhaDoServidor: false });
+  const jpeg = await loja.requisitar(envio.dados.foto);
+  assert.equal(jpeg.status, 200);
+  assert.equal(jpeg.resposta.headers.get('content-type'), 'image/jpeg');
+  const webp = await loja.requisitar(envio.dados.foto.replace('.jpg', '-400.webp'));
+  assert.equal(webp.status, 200);
+  assert.equal(webp.resposta.headers.get('content-type'), 'image/webp');
+});
+
+test('recusa arquivo que finge ser foto', async () => {
+  const navegador = criarNavegador();
+  await navegador.entrar();
+  const formulario = new FormData();
+  formulario.append('foto', new Blob(['<?php echo "invasão"; ?>'], { type: 'image/jpeg' }), 'foto.jpg');
+  const envio = await navegador.requisitar('api/admin/fotos.php', { metodo: 'POST', corpo: formulario });
+  assert.equal(envio.status, 422);
+  assert.match(envio.dados.erro, /JPEG, PNG ou WebP/);
+});
+
+test('endereço de foto inventado ou com caminho de pasta dá 404', async () => {
+  const loja = criarNavegador({ comSenhaDoServidor: false });
+  assert.equal((await loja.requisitar(`fotos/${'0'.repeat(32)}.jpg`)).status, 404);
+  assert.equal((await loja.requisitar('api/foto.php?arquivo=../config/vivale.php')).status, 404);
+});
+
+// ---------- Arquivos protegidos ----------
+
+test('peças internas e arquivos de desenvolvimento ficam bloqueados', async () => {
+  const loja = criarNavegador({ comSenhaDoServidor: false });
+  const caminhosBloqueados = [
+    'api/nucleo/banco.php',
+    'api/sql/001_inicial.sql',
+    'api/config.exemplo.php',
+    'docker/dev/config/vivale.php',
+    'docker-compose.yml',
+    'tests-api/backend.test.js',
+    'ferramentas/criar-usuario.php',
+  ];
+  for (const caminho of caminhosBloqueados) {
+    assert.equal((await loja.requisitar(caminho)).status, 403, caminho);
+  }
+});

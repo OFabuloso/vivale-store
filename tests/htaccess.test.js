@@ -31,3 +31,19 @@ test('as páginas da loja continuam abertas às clientes', () => {
   assert.equal(extrairBlocoArquivo('contato.html'), null);
   assert.equal((conteudoHtaccess.match(/Require valid-user/g) || []).length, 1);
 });
+
+test('bloqueia as peças internas do backend e os arquivos de desenvolvimento', () => {
+  assert.match(conteudoHtaccess, /RewriteRule \^api\/\(nucleo\|sql\)\(\/\|\$\) - \[F,L\]/);
+  assert.match(conteudoHtaccess, /tests-api/);
+  assert.match(conteudoHtaccess, /docker\)/);
+  assert.match(conteudoHtaccess, /docker-compose\\\.yml/);
+});
+
+test('a API do painel e o login também pedem a senha do servidor', () => {
+  for (const arquivo of ['api/admin/.htaccess', 'api/.htaccess']) {
+    const conteudo = fs.readFileSync(path.join(__dirname, '..', arquivo), 'utf8');
+    assert.match(conteudo, /AuthType Basic/, arquivo);
+    assert.match(conteudo, /Require valid-user/, arquivo);
+    assert.ok(!conteudo.includes('public_html/.htpasswd'), arquivo);
+  }
+});

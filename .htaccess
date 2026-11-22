@@ -25,8 +25,15 @@ DirectoryIndex index.html
   RewriteRule (^|/)\.(?!well-known/) - [F,L]
 
   # Bloqueia o que é só de desenvolvimento e não faz parte da loja
-  RewriteRule ^(tests|ferramentas|node_modules)(/|$) - [F,L]
-  RewriteRule ^package(-lock)?\.json$ - [F,L]
+  RewriteRule ^(tests|tests-api|ferramentas|node_modules|docker)(/|$) - [F,L]
+  RewriteRule ^(package(-lock)?\.json|docker-compose\.yml)$ - [F,L]
+
+  # Peças internas do backend: só são usadas pelos endpoints, nunca acessadas direto
+  RewriteRule ^api/(nucleo|sql)(/|$) - [F,L]
+  RewriteRule ^api/config\.exemplo\.php$ - [F,L]
+
+  # Fotos enviadas pelo painel: ficam fora da public_html e são entregues pelo api/foto.php
+  RewriteRule ^fotos/([a-f0-9]{32}(?:\.jpg|-(?:400|600)\.webp))$ api/foto.php?arquivo=$1 [L]
 </IfModule>
 
 # Tempo de cache no navegador da cliente
@@ -34,9 +41,10 @@ DirectoryIndex index.html
   ExpiresActive On
   ExpiresDefault "access plus 1 hour"
   ExpiresByType text/html "access plus 0 seconds"
-  ExpiresByType text/css "access plus 1 hour"
-  ExpiresByType application/javascript "access plus 1 hour"
-  ExpiresByType text/javascript "access plus 1 hour"
+  # CSS e JavaScript por pouco tempo: depois de uma atualização, ninguém fica com versões misturadas
+  ExpiresByType text/css "access plus 10 minutes"
+  ExpiresByType application/javascript "access plus 10 minutes"
+  ExpiresByType text/javascript "access plus 10 minutes"
   ExpiresByType image/webp "access plus 30 days"
   ExpiresByType image/jpeg "access plus 30 days"
   ExpiresByType image/png "access plus 30 days"

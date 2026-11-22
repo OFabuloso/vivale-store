@@ -1,0 +1,6 @@
+# Camada extra: a API do painel também exige o usuário e a senha do servidor (.htpasswd),
+# os mesmos do admin.html. O login do painel continua sendo conferido pelo PHP.
+AuthType Basic
+AuthName "Area do Vendedor"
+AuthUserFile /home/u151095779/domains/vivalestore.com.br/.htpasswd
+Require valid-user
