@@ -41,15 +41,24 @@ DirectoryIndex index.html
   ExpiresActive On
   ExpiresDefault "access plus 1 hour"
   ExpiresByType text/html "access plus 0 seconds"
-  # CSS e JavaScript por pouco tempo: depois de uma atualização, ninguém fica com versões misturadas
-  ExpiresByType text/css "access plus 10 minutes"
-  ExpiresByType application/javascript "access plus 10 minutes"
-  ExpiresByType text/javascript "access plus 10 minutes"
   ExpiresByType image/webp "access plus 30 days"
   ExpiresByType image/jpeg "access plus 30 days"
   ExpiresByType image/png "access plus 30 days"
   ExpiresByType image/x-icon "access plus 30 days"
 </IfModule>
+
+# CSS e JavaScript: o navegador confere a cada visita se mudou (responde 304 quando não mudou).
+# Assim, depois de uma publicação, ninguém fica com versões misturadas. A Hostinger entrega
+# o JS como application/x-javascript, por isso a regra é pelo nome do arquivo e não pelo tipo.
+<FilesMatch "\.(js|css)$">
+  <IfModule mod_expires.c>
+    ExpiresActive Off
+  </IfModule>
+  <IfModule mod_headers.c>
+    Header set Cache-Control "no-cache"
+    Header unset Expires
+  </IfModule>
+</FilesMatch>
 
 # Cabeçalhos básicos de segurança
 <IfModule mod_headers.c>

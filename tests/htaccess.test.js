@@ -47,3 +47,18 @@ test('a API do painel e o login também pedem a senha do servidor', () => {
     assert.ok(!conteudo.includes('public_html/.htpasswd'), arquivo);
   }
 });
+
+test('JS e CSS são conferidos a cada visita, qualquer que seja o tipo informado', () => {
+  const blocoJsCss = conteudoHtaccess.match(/<FilesMatch "\\\.\(js\|css\)\$">([\s\S]*?)<\/FilesMatch>/);
+  assert.ok(blocoJsCss, 'falta o bloco <FilesMatch> de JS e CSS');
+  assert.match(blocoJsCss[1], /Cache-Control "no-cache"/);
+});
+
+test('as páginas pedem os scripts e o CSS com versão, para escapar de caches antigos', () => {
+  for (const pagina of ['index.html', 'contato.html', 'admin.html']) {
+    const html = fs.readFileSync(path.join(__dirname, '..', pagina), 'utf8');
+    const enderecosLocais = [...html.matchAll(/(?:src|href)="((?:js|css)\/[^"]+)"/g)].map((resultado) => resultado[1]);
+    assert.ok(enderecosLocais.length > 0, pagina);
+    for (const endereco of enderecosLocais) assert.match(endereco, /\?v=\d+$/, `${pagina}: ${endereco}`);
+  }
+});
