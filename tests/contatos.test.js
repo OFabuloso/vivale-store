@@ -85,3 +85,8 @@ test('a cliente só vê os contatos ligados', () => {
   ]);
   assert.deepEqual(filtrarContatosAtivos([contatoDesligado]), []);
 });
+
+test('lista vazia vinda do servidor quer dizer todos os atendentes desligados', () => {
+  const configuracaoDoServidor = { contatosWhatsApp: [], origemServidor: true };
+  assert.deepEqual(resolverContatos(configuracaoDoServidor, { contatosWhatsApp: [contatoVendas] }), []);
+});

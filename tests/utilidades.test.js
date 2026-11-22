@@ -67,6 +67,16 @@ test('foto de img/produtos gera o srcset com as versões otimizadas', () => {
   );
 });
 
+test('foto enviada pelo painel gera o srcset com os WebPs do servidor', () => {
+  const nomeDaFoto = 'a'.repeat(32);
+  assert.equal(
+    montarSrcsetDaFoto(`fotos/${nomeDaFoto}.jpg`),
+    `fotos/${nomeDaFoto}-400.webp 400w, fotos/${nomeDaFoto}-600.webp 600w`,
+  );
+  assert.equal(montarSrcsetDaFoto('fotos/curto.jpg'), '');
+  assert.equal(montarSrcsetDaFoto(`fotos/${nomeDaFoto}.png`), '');
+});
+
 test('foto sem versões otimizadas não gera srcset', () => {
   assert.equal(montarSrcsetDaFoto('https://exemplo.com/img/produtos/produto-01.jpeg'), '');
   assert.equal(montarSrcsetDaFoto('data:image/jpeg;base64,AAAA'), '');

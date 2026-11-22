@@ -63,6 +63,20 @@
     }
   }
 
+  /**
+   * Guarda o catálogo que veio do servidor (api/catalogo.php ou api/admin/painel.php).
+   * "origemServidor" faz uma lista vazia de contatos valer como "nenhum atendente ligado",
+   * em vez de voltar ao contato dos dados iniciais.
+   */
+  function aplicarCatalogoDoServidor(catalogo) {
+    salvarJson(CHAVES.produtos, catalogo.produtos);
+    salvarConfiguracao({ ...catalogo.configuracao, origemServidor: true });
+    // Impede que o dados-iniciais.js (usado sem servidor) passe por cima do catálogo do servidor
+    const versaoSalva = lerJson(CHAVES.versaoDados, 0);
+    const versaoDosDadosIniciais = raiz.Loja.dadosIniciais.versao;
+    salvarJson(CHAVES.versaoDados, Math.max(Number(versaoSalva) || 0, versaoDosDadosIniciais));
+  }
+
   /** Sobrescreve produtos e configurações com o conteúdo do arquivo de dados iniciais. */
   function restaurarDadosIniciais() {
     const dadosIniciais = raiz.Loja.dadosIniciais;
@@ -142,6 +156,7 @@
     delete configuracaoCompleta.numeroWhatsApp;
     // Um dados-iniciais.js antigo ainda pode trazer a senha; ela não pode vazar para a exportação
     delete configuracaoCompleta.senhaAdmin;
+    delete configuracaoCompleta.origemServidor;
     return configuracaoCompleta;
   }
 
@@ -190,6 +205,7 @@
   raiz.Loja.armazenamento = {
     CHAVES,
     inicializar,
+    aplicarCatalogoDoServidor,
     restaurarDadosIniciais,
     obterProdutos,
     obterProdutosAtivos,

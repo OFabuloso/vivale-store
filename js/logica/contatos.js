@@ -54,11 +54,15 @@
       }));
   }
 
-  /** Lê os contatos de uma configuração; devolve null se ela não tiver nenhum. */
+  /**
+   * Lê os contatos de uma configuração; devolve null se ela não tiver nenhum.
+   * Lista vazia vinda do servidor é válida: quer dizer que todos os atendentes estão desligados.
+   */
   function lerContatosDe(configuracao) {
     if (!configuracao || typeof configuracao !== 'object') return null;
-    if (Array.isArray(configuracao.contatosWhatsApp) && configuracao.contatosWhatsApp.length > 0) {
-      return filtrarContatosBemFormados(configuracao.contatosWhatsApp);
+    const listaContatos = configuracao.contatosWhatsApp;
+    if (Array.isArray(listaContatos) && (listaContatos.length > 0 || configuracao.origemServidor === true)) {
+      return filtrarContatosBemFormados(listaContatos);
     }
     if (configuracao.numeroWhatsApp) return converterNumeroAntigo(configuracao.numeroWhatsApp);
     return null;

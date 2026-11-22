@@ -167,11 +167,18 @@
    * "npm run otimizar-fotos"). Links externos e fotos em Base64 não têm versões: devolve ''.
    */
   function montarSrcsetDaFoto(enderecoFoto) {
-    const correspondencia = /^img\/produtos\/([\w-]+)\.jpe?g$/i.exec(String(enderecoFoto || ''));
-    if (!correspondencia) return '';
-    const nomeDaFoto = correspondencia[1];
+    const endereco = String(enderecoFoto || '');
+    const fotoDoProjeto = /^img\/produtos\/([\w-]+)\.jpe?g$/i.exec(endereco);
+    // Fotos enviadas pelo painel: o servidor gera as versões WebP ao lado do JPEG
+    const fotoEnviada = /^fotos\/([a-f0-9]{32})\.jpg$/.exec(endereco);
+    const prefixoDasVersoes = fotoDoProjeto
+      ? `img/produtos/otimizadas/${fotoDoProjeto[1]}`
+      : fotoEnviada
+        ? `fotos/${fotoEnviada[1]}`
+        : '';
+    if (!prefixoDasVersoes) return '';
     return LARGURAS_FOTO_OTIMIZADA.map(
-      (largura) => `img/produtos/otimizadas/${nomeDaFoto}-${largura}.webp ${largura}w`,
+      (largura) => `${prefixoDasVersoes}-${largura}.webp ${largura}w`,
     ).join(', ');
   }
 

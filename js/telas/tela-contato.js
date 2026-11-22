@@ -6,7 +6,7 @@
 (function (raiz) {
   'use strict';
 
-  const { armazenamento, carrinho, whatsapp, contatos, utilidades, componentes } = raiz.Loja;
+  const { armazenamento, carrinho, whatsapp, contatos, utilidades, componentes, api } = raiz.Loja;
   const { formatarMoeda, escaparHtml } = utilidades;
 
   const elementos = {};
@@ -28,8 +28,16 @@
     elementos.aviso = document.getElementById('aviso-contato');
 
     elementos.lista.addEventListener('click', tratarEscolhaDeContato);
-    // "pageshow" também dispara ao voltar do WhatsApp pelo botão Voltar (cache do navegador)
-    raiz.addEventListener('pageshow', renderizar);
+    // A página só chama iniciar() depois de buscar o catálogo, quando o primeiro "pageshow"
+    // pode já ter passado: por isso desenha aqui mesmo
+    renderizar();
+    // Ao voltar do WhatsApp pelo botão Voltar (cache do navegador), busca de novo quais
+    // atendentes estão ligados
+    raiz.addEventListener('pageshow', async (evento) => {
+      if (!evento.persisted) return;
+      await api.sincronizarCatalogo();
+      renderizar();
+    });
     // Mantém a tela em dia se o carrinho mudar na guia da loja
     raiz.addEventListener('storage', renderizar);
   }
@@ -103,16 +111,21 @@
       </li>`;
   }
 
-  function tratarEscolhaDeContato(evento) {
+  async function tratarEscolhaDeContato(evento) {
     const botao = evento.target.closest('button[data-id-contato]');
     if (!botao) return;
 
     // Relê tudo no momento do clique: o pedido pode ter mudado em outra guia
+    // e o atendente pode ter sido desligado no painel desde que a página abriu
+    botao.disabled = true;
+    await api.sincronizarCatalogo();
+    botao.disabled = false;
     const { itens, contatosDisponiveis, situacaoMinimo } = lerPedido();
     const contatoEscolhido = contatosDisponiveis.find(
       (contato) => contato.id === botao.dataset.idContato,
     );
     if (!contatoEscolhido || itens.length === 0 || !situacaoMinimo.atingido) {
+      if (!contatoEscolhido) componentes.mostrarToast('Esse atendimento não está mais disponível.');
       renderizar();
       return;
     }

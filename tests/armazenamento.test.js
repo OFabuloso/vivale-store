@@ -86,3 +86,19 @@ test('apaga a senha que versões antigas guardavam no navegador', () => {
   assert.equal(conteudoArmazenado.has('loja_atacado_senha_admin'), false);
   assert.deepEqual(JSON.parse(conteudoArmazenado.get(armazenamento.CHAVES.configuracao)), { valorMinimo: 300 });
 });
+
+test('guarda o catálogo do servidor e não deixa os dados iniciais passarem por cima', () => {
+  const produtoDoServidor = { id: 'prd-1', nome: 'Vestido', preco: 50, tamanhos: ['P'], cores: ['Preto'], ativo: true };
+  armazenamento.aplicarCatalogoDoServidor({
+    produtos: [produtoDoServidor],
+    configuracao: { contatosWhatsApp: [], valorMinimo: 300 },
+  });
+
+  armazenamento.inicializar();
+
+  assert.deepEqual(armazenamento.obterProdutos(), [produtoDoServidor]);
+  const configuracao = armazenamento.obterConfiguracao();
+  assert.deepEqual(configuracao.contatosWhatsApp, []);
+  assert.equal(configuracao.valorMinimo, 300);
+  assert.equal(configuracao.origemServidor, undefined);
+});
