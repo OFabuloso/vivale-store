@@ -48,7 +48,7 @@ test('ignora valor corrompido ou de tipo inesperado', () => {
 test('configuração sem nada salvo usa os contatos dos dados iniciais', () => {
   const configuracao = armazenamento.obterConfiguracao();
   assert.deepEqual(configuracao.contatosWhatsApp, [
-    { id: 'contato-padrao', nome: 'Atendimento', numero: '5521979396729' },
+    { id: 'contato-padrao', nome: 'Atendimento', numero: '5521979396729', ativo: true },
   ]);
   assert.equal(configuracao.valorMinimo, 500);
 });
@@ -67,8 +67,8 @@ test('migra o número único salvo por versões antigas e deixa de expô-lo', ()
 
 test('salva e recupera a lista de contatos editada', () => {
   const novosContatos = [
-    { id: 'contato-a', nome: 'Vendas', numero: '5521911112222' },
-    { id: 'contato-b', nome: 'Gerência', numero: '5521933334444' },
+    { id: 'contato-a', nome: 'Vendas', numero: '5521911112222', ativo: true },
+    { id: 'contato-b', nome: 'Gerência', numero: '5521933334444', ativo: false },
   ];
   armazenamento.salvarConfiguracao({ contatosWhatsApp: novosContatos });
   assert.deepEqual(armazenamento.obterConfiguracao().contatosWhatsApp, novosContatos);

@@ -1,6 +1,7 @@
 /**
  * Contatos de WhatsApp da loja: para quem a cliente pode enviar o pedido.
- * Cada contato tem o formato { id, nome, numero } (número só com dígitos, já com o DDI 55).
+ * Cada contato tem o formato { id, nome, numero, ativo } (número só com dígitos, já com o DDI 55).
+ * Contatos com "ativo: false" ficam desligados e não aparecem para a cliente.
  * Funciona no navegador (window.Loja.contatos) e no Node (module.exports) para os testes.
  */
 (function (raiz) {
@@ -31,8 +32,14 @@
         id: 'contato-principal',
         nome: NOME_CONTATO_PADRAO,
         numero: utilidades.normalizarTelefone(numeroWhatsApp),
+        ativo: true,
       },
     ];
+  }
+
+  /** Contatos sem o campo (versões antigas) contam como ligados. */
+  function contatoEstaAtivo(contato) {
+    return contato.ativo !== false;
   }
 
   /** Mantém só os contatos com o formato esperado. */
@@ -43,6 +50,7 @@
         id: String(contato.id || gerarIdContato()),
         nome: String(contato.nome || '').trim() || NOME_CONTATO_PADRAO,
         numero: utilidades.normalizarTelefone(contato.numero),
+        ativo: contatoEstaAtivo(contato),
       }));
   }
 
@@ -62,6 +70,11 @@
    */
   function resolverContatos(configuracaoSalva, configuracaoPadrao) {
     return lerContatosDe(configuracaoSalva) || lerContatosDe(configuracaoPadrao) || [];
+  }
+
+  /** Só os contatos ligados: são as opções que a cliente vê ao finalizar o pedido. */
+  function filtrarContatosAtivos(listaContatos) {
+    return listaContatos.filter(contatoEstaAtivo);
   }
 
   /**
@@ -88,7 +101,7 @@
       }
 
       numerosUsados.add(numero);
-      contatosValidados.push({ id: contato.id || gerarIdContato(), nome, numero });
+      contatosValidados.push({ id: contato.id || gerarIdContato(), nome, numero, ativo: contatoEstaAtivo(contato) });
     }
 
     return { contatos: contatosValidados };
@@ -112,6 +125,7 @@
     NOME_CONTATO_PADRAO,
     gerarIdContato,
     resolverContatos,
+    filtrarContatosAtivos,
     validarContatos,
     formatarTelefone,
   };

@@ -254,7 +254,7 @@
 
   // ---------- Contatos do WhatsApp ----------
 
-  /** Desenha uma linha editável (nome + número + remover) para cada contato salvo. */
+  /** Desenha uma linha editável (nome + número + liga/desliga + remover) para cada contato salvo. */
   function preencherContatos() {
     const { contatosWhatsApp } = armazenamento.obterConfiguracao();
     elementos.listaContatos.innerHTML = '';
@@ -277,14 +277,30 @@
         <label for="${idSeguro}-numero">WhatsApp</label>
         <input type="tel" id="${idSeguro}-numero" data-campo="numero" inputmode="tel" placeholder="(21) 99999-9999" />
       </div>
+      <label class="interruptor">
+        <input type="checkbox" role="switch" data-campo="ativo" />
+        <span class="interruptor-trilho" aria-hidden="true"></span>
+        <span class="interruptor-texto"></span>
+      </label>
       <button class="botao botao-perigo botao-pequeno" type="button" data-acao="remover-contato">Remover</button>`;
     // Valores atribuídos via propriedade: dispensa escapar o texto digitado
     linha.querySelector('[data-campo="nome"]').value = contato.nome || '';
     linha.querySelector('[data-campo="numero"]').value = contato.numero
       ? contatos.formatarTelefone(contato.numero)
       : '';
+    const campoAtivo = linha.querySelector('[data-campo="ativo"]');
+    campoAtivo.checked = contato.ativo !== false;
+    campoAtivo.addEventListener('change', () => atualizarTextoInterruptor(linha));
+    atualizarTextoInterruptor(linha);
     elementos.listaContatos.appendChild(linha);
     return linha;
+  }
+
+  /** Mostra "Ligado"/"Desligado" ao lado do interruptor e deixa esmaecida a linha do contato desligado. */
+  function atualizarTextoInterruptor(linha) {
+    const estaLigado = linha.querySelector('[data-campo="ativo"]').checked;
+    linha.querySelector('.interruptor-texto').textContent = estaLigado ? 'Ligado' : 'Desligado';
+    linha.classList.toggle('contato-desligado', !estaLigado);
   }
 
   function adicionarContatoVazio() {
@@ -308,6 +324,7 @@
         id: linha.dataset.idContato,
         nome: linha.querySelector('[data-campo="nome"]').value,
         numero: linha.querySelector('[data-campo="numero"]').value,
+        ativo: linha.querySelector('[data-campo="ativo"]').checked,
       }),
     );
 

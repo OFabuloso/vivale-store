@@ -48,6 +48,8 @@
     return {
       itens: sincronizacao.itens,
       configuracao,
+      // Atendentes desligados no painel não aparecem como opção
+      contatosDisponiveis: contatos.filtrarContatosAtivos(configuracao.contatosWhatsApp),
       situacaoMinimo: carrinho.validarPedidoMinimo(sincronizacao.itens, configuracao.valorMinimo),
     };
   }
@@ -61,7 +63,7 @@
   }
 
   function renderizar() {
-    const { itens, configuracao, situacaoMinimo } = lerPedido();
+    const { itens, configuracao, contatosDisponiveis, situacaoMinimo } = lerPedido();
 
     if (itens.length === 0) {
       mostrarAviso('Não há pedido em andamento. Volte à loja para escolher suas peças.');
@@ -74,7 +76,7 @@
       );
       return;
     }
-    if (configuracao.contatosWhatsApp.length === 0) {
+    if (contatosDisponiveis.length === 0) {
       mostrarAviso('Nenhum atendimento disponível no momento. Tente novamente mais tarde.');
       return;
     }
@@ -84,7 +86,7 @@
       `${totalPecas} ${totalPecas === 1 ? 'peça' : 'peças'} · ${formatarMoeda(situacaoMinimo.valorTotal)}`;
     elementos.resumo.classList.remove('oculto');
     elementos.aviso.classList.add('oculto');
-    elementos.lista.innerHTML = configuracao.contatosWhatsApp.map(montarHtmlContato).join('');
+    elementos.lista.innerHTML = contatosDisponiveis.map(montarHtmlContato).join('');
   }
 
   function montarHtmlContato(contato) {
@@ -106,8 +108,8 @@
     if (!botao) return;
 
     // Relê tudo no momento do clique: o pedido pode ter mudado em outra guia
-    const { itens, configuracao, situacaoMinimo } = lerPedido();
-    const contatoEscolhido = configuracao.contatosWhatsApp.find(
+    const { itens, contatosDisponiveis, situacaoMinimo } = lerPedido();
+    const contatoEscolhido = contatosDisponiveis.find(
       (contato) => contato.id === botao.dataset.idContato,
     );
     if (!contatoEscolhido || itens.length === 0 || !situacaoMinimo.atingido) {
