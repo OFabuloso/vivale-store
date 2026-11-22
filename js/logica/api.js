@@ -74,7 +74,13 @@
    */
   async function sincronizarCatalogo() {
     try {
-      raiz.Loja.armazenamento.aplicarCatalogoDoServidor(await buscarCatalogoPublico());
+      const catalogo = await buscarCatalogoPublico();
+      // Catálogo sem nenhum produto indica banco vazio ou com problema: a vitrine nunca
+      // deve ficar em branco por isso, então mantém o catálogo guardado
+      if (!Array.isArray(catalogo.produtos) || catalogo.produtos.length === 0) {
+        throw new Error('O servidor respondeu com o catálogo vazio.');
+      }
+      raiz.Loja.armazenamento.aplicarCatalogoDoServidor(catalogo);
       return true;
     } catch (erro) {
       console.warn('Catálogo do servidor indisponível; usando o catálogo guardado.', erro);

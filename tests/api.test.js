@@ -69,3 +69,30 @@ test('codifica o id ao excluir um produto', async () => {
   assert.equal(requisicoesFeitas[0].caminho, 'api/admin/produtos.php?id=prd%201%26x');
   assert.equal(requisicoesFeitas[0].method, 'DELETE');
 });
+
+test('sincroniza o catálogo do servidor quando ele traz produtos', async () => {
+  const catalogosAplicados = [];
+  globalThis.Loja = { armazenamento: { aplicarCatalogoDoServidor: (catalogo) => catalogosAplicados.push(catalogo) } };
+  try {
+    proximasRespostas = [{ dados: { produtos: [{ id: 'prd-1' }], configuracao: {} } }];
+    assert.equal(await api.sincronizarCatalogo(), true);
+    assert.equal(catalogosAplicados.length, 1);
+  } finally {
+    delete globalThis.Loja;
+  }
+});
+
+test('catálogo vazio do servidor não apaga o catálogo guardado', async () => {
+  const catalogosAplicados = [];
+  globalThis.Loja = { armazenamento: { aplicarCatalogoDoServidor: (catalogo) => catalogosAplicados.push(catalogo) } };
+  const avisoOriginal = console.warn;
+  console.warn = () => {};
+  try {
+    proximasRespostas = [{ dados: { produtos: [], configuracao: { contatosWhatsApp: [] } } }];
+    assert.equal(await api.sincronizarCatalogo(), false);
+    assert.equal(catalogosAplicados.length, 0);
+  } finally {
+    console.warn = avisoOriginal;
+    delete globalThis.Loja;
+  }
+});
