@@ -1150,6 +1150,47 @@ button {
   outline: 2px solid var(--cor-destaque-claro);
 }
 
+/* Campo de senha com o botão de olho por dentro, à direita */
+.campo-senha {
+  position: relative;
+}
+
+.campo .campo-senha input {
+  padding-right: 52px;
+}
+
+.botao-ver-senha {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--raio);
+  background: transparent;
+  color: var(--cor-texto-suave);
+  cursor: pointer;
+  transform: translateY(-50%);
+}
+
+.botao-ver-senha:hover,
+.botao-ver-senha[aria-pressed='true'] {
+  color: var(--cor-destaque);
+}
+
+.botao-ver-senha:focus-visible {
+  outline: 2px solid var(--cor-destaque-claro);
+}
+
+.botao-ver-senha svg {
+  width: 20px;
+  height: 20px;
+}
+
 /* Zera margens e recuos padrão do fieldset para alinhar com os outros campos */
 fieldset.campo {
   min-width: 0;

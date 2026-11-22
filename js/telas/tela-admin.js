@@ -36,6 +36,7 @@
     elementos.campoCores = document.getElementById('produto-cores');
     elementos.campoAtivo = document.getElementById('produto-ativo');
 
+    criarBotoesVerSenha();
     document.getElementById('formulario-login').addEventListener('submit', entrar);
     document.getElementById('botao-sair').addEventListener('click', sair);
     document.querySelectorAll('.aba').forEach((aba) => aba.addEventListener('click', trocarAba));
@@ -79,6 +80,52 @@
     }
   }
 
+  const ICONE_OLHO = `
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+      <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z" stroke-linejoin="round" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>`;
+  const ICONE_OLHO_RISCADO = `
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+      <path d="M2 12s3.6-7 10-7c2 0 3.7.7 5.1 1.6M22 12s-3.6 7-10 7c-2 0-3.7-.7-5.1-1.6" stroke-linecap="round" />
+      <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2M3 3l18 18" stroke-linecap="round" />
+    </svg>`;
+
+  /** Coloca um botão de olho em cada campo de senha, para conferir o que foi digitado. */
+  function criarBotoesVerSenha() {
+    document.querySelectorAll('input[type="password"]').forEach((campoSenha) => {
+      const envoltorio = document.createElement('div');
+      envoltorio.className = 'campo-senha';
+      campoSenha.replaceWith(envoltorio);
+      envoltorio.append(campoSenha);
+
+      const botaoVer = document.createElement('button');
+      botaoVer.type = 'button';
+      botaoVer.className = 'botao-ver-senha';
+      envoltorio.append(botaoVer);
+      definirSenhaVisivel(campoSenha, botaoVer, false);
+
+      botaoVer.addEventListener('click', () => {
+        definirSenhaVisivel(campoSenha, botaoVer, campoSenha.type === 'password');
+        campoSenha.focus();
+      });
+    });
+  }
+
+  function definirSenhaVisivel(campoSenha, botaoVer, visivel) {
+    campoSenha.type = visivel ? 'text' : 'password';
+    botaoVer.innerHTML = visivel ? ICONE_OLHO_RISCADO : ICONE_OLHO;
+    botaoVer.setAttribute('aria-label', visivel ? 'Ocultar senha' : 'Mostrar senha');
+    botaoVer.setAttribute('aria-pressed', String(visivel));
+  }
+
+  /** Volta a esconder todas as senhas (depois de entrar, sair ou trocar a senha). */
+  function esconderSenhas() {
+    document.querySelectorAll('.campo-senha').forEach((envoltorio) => {
+      definirSenhaVisivel(envoltorio.querySelector('input'), envoltorio.querySelector('.botao-ver-senha'), false);
+    });
+  }
+
   function mostrarLogin(mensagem = '') {
     elementos.painel.classList.add('oculto');
     elementos.telaLogin.classList.remove('oculto');
@@ -102,6 +149,7 @@
     try {
       await api.entrar(campoUsuario.value.trim(), campoSenha.value);
       campoSenha.value = '';
+      esconderSenhas();
       await abrirPainel();
     } catch (erro) {
       mostrarLogin(erro.message);
@@ -521,6 +569,7 @@
     try {
       await api.trocarSenha(campoSenhaAtual.value, campoNovaSenha.value);
       evento.target.reset();
+      esconderSenhas();
       componentes.mostrarToast('Senha trocada');
     } catch (erro) {
       tratarErroDoServidor(erro, mostrarErro);
