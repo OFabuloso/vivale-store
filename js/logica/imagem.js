@@ -1,42 +1,52 @@
 /**
- * Conversão de fotos enviadas pelo Admin para Base64, já reduzidas,
- * para não estourar o limite do LocalStorage (cerca de 5 MB no total).
+ * Prepara as fotos escolhidas no painel antes do envio ao servidor:
+ * reduz fotos grandes de celular, o que deixa o envio rápido e abaixo do limite de 8 MB.
+ * O servidor ainda redesenha a foto e gera as versões leves usadas na loja.
  */
 (function (raiz) {
   'use strict';
 
-  const LARGURA_MAXIMA = 800;
-  const QUALIDADE_JPEG = 0.78;
+  const LARGURA_MAXIMA = 2000;
+  const QUALIDADE_JPEG = 0.9;
 
   function carregarImagem(arquivo) {
     return new Promise((resolver, rejeitar) => {
-      const leitor = new FileReader();
-      leitor.onerror = () => rejeitar(new Error('Não foi possível ler o arquivo.'));
-      leitor.onload = () => {
-        const imagem = new Image();
-        imagem.onload = () => resolver(imagem);
-        imagem.onerror = () => rejeitar(new Error('O arquivo enviado não é uma imagem válida.'));
-        imagem.src = leitor.result;
+      const endereco = URL.createObjectURL(arquivo);
+      const imagem = new Image();
+      imagem.onload = () => {
+        URL.revokeObjectURL(endereco);
+        resolver(imagem);
       };
-      leitor.readAsDataURL(arquivo);
+      imagem.onerror = () => {
+        URL.revokeObjectURL(endereco);
+        rejeitar(new Error('O arquivo enviado não é uma imagem válida.'));
+      };
+      imagem.src = endereco;
     });
   }
 
-  /** Recebe um arquivo de imagem e devolve um Base64 JPEG redimensionado. */
-  async function converterParaBase64Reduzido(arquivo) {
+  /** Recebe o arquivo escolhido e devolve um JPEG (Blob) de no máximo 2000 px de largura. */
+  async function reduzirParaEnvio(arquivo) {
     const imagem = await carregarImagem(arquivo);
-    const escala = Math.min(1, LARGURA_MAXIMA / imagem.width);
+    const escala = Math.min(1, LARGURA_MAXIMA / imagem.naturalWidth);
     const tela = document.createElement('canvas');
-    tela.width = Math.round(imagem.width * escala);
-    tela.height = Math.round(imagem.height * escala);
+    tela.width = Math.round(imagem.naturalWidth * escala);
+    tela.height = Math.round(imagem.naturalHeight * escala);
 
     const contexto = tela.getContext('2d');
     contexto.fillStyle = '#ffffff'; // fundo branco para PNGs com transparência
     contexto.fillRect(0, 0, tela.width, tela.height);
     contexto.drawImage(imagem, 0, 0, tela.width, tela.height);
-    return tela.toDataURL('image/jpeg', QUALIDADE_JPEG);
+    return new Promise((resolver, rejeitar) => {
+      tela.toBlob(
+        (arquivoReduzido) =>
+          arquivoReduzido ? resolver(arquivoReduzido) : rejeitar(new Error('Não foi possível preparar a foto.')),
+        'image/jpeg',
+        QUALIDADE_JPEG,
+      );
+    });
   }
 
   raiz.Loja = raiz.Loja || {};
-  raiz.Loja.imagem = { converterParaBase64Reduzido };
+  raiz.Loja.imagem = { reduzirParaEnvio };
 })(window);

@@ -1,20 +1,22 @@
 /**
  * Painel do Vendedor: CRUD de produtos, contatos do WhatsApp e configurações da loja.
  *
- * O acesso é protegido pelo servidor (usuário e senha no .htaccess), antes de a página
- * carregar. Por isso o painel não tem login próprio e abre direto.
+ * Tudo é salvo no servidor (api/admin/*) e vale para as clientes na hora.
+ * O login é conferido no servidor; o navegador guarda só uma cópia para desenhar as telas.
  */
 (function (raiz) {
   'use strict';
 
-  const { armazenamento, utilidades, componentes, imagem, contatos } = raiz.Loja;
-  const { formatarMoeda, escaparHtml, lerValorMonetario, gerarId } = utilidades;
+  const { armazenamento, utilidades, componentes, imagem, contatos, api } = raiz.Loja;
+  const { formatarMoeda, escaparHtml, lerValorMonetario } = utilidades;
 
   const elementos = {};
   let idProdutoEmEdicao = null;
   let fotoAtual = '';
 
   function iniciar() {
+    elementos.telaLogin = document.getElementById('tela-login');
+    elementos.painel = document.getElementById('painel-admin');
     elementos.listaProdutos = document.getElementById('lista-produtos-admin');
     elementos.totalProdutos = document.getElementById('total-produtos');
     elementos.janelaProduto = document.getElementById('janela-formulario-produto');
@@ -34,6 +36,8 @@
     elementos.campoCores = document.getElementById('produto-cores');
     elementos.campoAtivo = document.getElementById('produto-ativo');
 
+    document.getElementById('formulario-login').addEventListener('submit', entrar);
+    document.getElementById('botao-sair').addEventListener('click', sair);
     document.querySelectorAll('.aba').forEach((aba) => aba.addEventListener('click', trocarAba));
 
     document.getElementById('botao-novo-produto').addEventListener('click', () => abrirFormulario(null));
@@ -54,11 +58,85 @@
     document.getElementById('botao-adicionar-contato').addEventListener('click', adicionarContatoVazio);
     document.getElementById('formulario-contatos').addEventListener('submit', salvarContatos);
     document.getElementById('formulario-configuracao').addEventListener('submit', salvarConfiguracoes);
+    document.getElementById('formulario-senha').addEventListener('submit', trocarSenha);
     document.getElementById('botao-exportar').addEventListener('click', exportarCatalogo);
-    document.getElementById('botao-restaurar').addEventListener('click', restaurarExemplo);
 
+    verificarSessao();
+  }
+
+  // ---------- Login ----------
+
+  async function verificarSessao() {
+    try {
+      const usuario = await api.obterSessao();
+      if (usuario) {
+        await abrirPainel();
+      } else {
+        mostrarLogin();
+      }
+    } catch (erro) {
+      mostrarLogin(erro.message);
+    }
+  }
+
+  function mostrarLogin(mensagem = '') {
+    elementos.painel.classList.add('oculto');
+    elementos.telaLogin.classList.remove('oculto');
+    const elementoErro = document.getElementById('erro-login');
+    elementoErro.textContent = mensagem;
+    elementoErro.classList.toggle('oculto', !mensagem);
+    document.getElementById('campo-usuario').focus();
+  }
+
+  async function entrar(evento) {
+    evento.preventDefault();
+    const campoUsuario = document.getElementById('campo-usuario');
+    const campoSenha = document.getElementById('campo-senha');
+    const botaoEntrar = document.getElementById('botao-entrar');
+    if (!campoUsuario.value.trim() || !campoSenha.value) {
+      mostrarLogin('Informe o usuário e a senha.');
+      return;
+    }
+
+    botaoEntrar.disabled = true;
+    try {
+      await api.entrar(campoUsuario.value.trim(), campoSenha.value);
+      campoSenha.value = '';
+      await abrirPainel();
+    } catch (erro) {
+      mostrarLogin(erro.message);
+      campoSenha.select();
+    } finally {
+      botaoEntrar.disabled = false;
+    }
+  }
+
+  async function sair() {
+    try {
+      await api.sair();
+    } catch (erro) {
+      // Mesmo sem resposta do servidor, a tela volta para o login
+    }
+    mostrarLogin();
+  }
+
+  /** Busca tudo no servidor, guarda a cópia no navegador e mostra o painel. */
+  async function abrirPainel() {
+    const dadosDoPainel = await api.carregarPainel();
+    armazenamento.aplicarCatalogoDoServidor(dadosDoPainel);
+    elementos.telaLogin.classList.add('oculto');
+    elementos.painel.classList.remove('oculto');
     renderizarProdutos();
     preencherConfiguracoes();
+  }
+
+  /** Sessão expirada volta para o login; outros erros só mostram a mensagem. */
+  function tratarErroDoServidor(erro, mostrarMensagem) {
+    if (erro.codigoHttp === 401) {
+      mostrarLogin('Sua sessão expirou. Entre de novo.');
+      return;
+    }
+    mostrarMensagem(erro.message);
   }
 
   function trocarAba(evento) {
@@ -106,7 +184,7 @@
       </article>`;
   }
 
-  function tratarAcaoProduto(evento) {
+  async function tratarAcaoProduto(evento) {
     const botao = evento.target.closest('button[data-acao]');
     if (!botao) return;
     const idProduto = botao.closest('[data-id]').dataset.id;
@@ -116,15 +194,24 @@
     if (botao.dataset.acao === 'editar') {
       abrirFormulario(produto);
     } else if (botao.dataset.acao === 'alternar') {
-      const salvou = salvarComTratamento({ ...produto, ativo: produto.ativo === false });
+      botao.disabled = true;
+      const salvou = await salvarComTratamento({ ...produto, ativo: produto.ativo === false });
+      botao.disabled = false;
       if (salvou) {
         componentes.mostrarToast(produto.ativo === false ? 'Produto ativado' : 'Produto inativado');
       }
     } else if (botao.dataset.acao === 'excluir') {
       if (!confirm(`Excluir "${produto.nome}" definitivamente?`)) return;
-      armazenamento.removerProduto(idProduto);
-      renderizarProdutos();
-      componentes.mostrarToast('Produto excluído');
+      botao.disabled = true;
+      try {
+        await api.excluirProduto(idProduto);
+        armazenamento.removerProduto(idProduto);
+        renderizarProdutos();
+        componentes.mostrarToast('Produto excluído');
+      } catch (erro) {
+        botao.disabled = false;
+        tratarErroDoServidor(erro, (mensagem) => alert(mensagem));
+      }
     }
   }
 
@@ -167,14 +254,25 @@
     if (endereco) elementos.previaFoto.src = endereco;
   }
 
+  /** Reduz a foto escolhida, envia ao servidor e mostra a prévia já pelo endereço definitivo. */
   async function tratarUploadFoto() {
     const arquivo = elementos.campoFotoArquivo.files[0];
     if (!arquivo) return;
+    const avisoEnviando = document.getElementById('produto-foto-enviando');
+    const botaoSalvar = elementos.formularioProduto.querySelector('button[type="submit"]');
+    avisoEnviando.classList.remove('oculto');
+    botaoSalvar.disabled = true;
+    elementos.erroProduto.classList.add('oculto');
     try {
+      const fotoReduzida = await imagem.reduzirParaEnvio(arquivo);
       elementos.campoFotoUrl.value = '';
-      definirFoto(await imagem.converterParaBase64Reduzido(arquivo));
+      definirFoto(await api.enviarFoto(fotoReduzida));
     } catch (erro) {
-      mostrarErroProduto(erro.message);
+      elementos.campoFotoArquivo.value = '';
+      tratarErroDoServidor(erro, mostrarErroProduto);
+    } finally {
+      avisoEnviando.classList.add('oculto');
+      botaoSalvar.disabled = false;
     }
   }
 
@@ -209,7 +307,8 @@
 
     return {
       produto: {
-        id: idProdutoEmEdicao || gerarId(),
+        // Produto novo vai sem id: o servidor cria o identificador
+        id: idProdutoEmEdicao,
         nome,
         descricao,
         categoria,
@@ -222,32 +321,38 @@
     };
   }
 
-  function salvarFormularioProduto(evento) {
+  async function salvarFormularioProduto(evento) {
     evento.preventDefault();
     const resultado = lerFormularioProduto();
     if (resultado.erro) {
       mostrarErroProduto(resultado.erro);
       return;
     }
-    if (salvarComTratamento(resultado.produto)) {
+    const botaoSalvar = elementos.formularioProduto.querySelector('button[type="submit"]');
+    botaoSalvar.disabled = true;
+    const salvou = await salvarComTratamento(resultado.produto);
+    botaoSalvar.disabled = false;
+    if (salvou) {
       elementos.janelaProduto.close();
       componentes.mostrarToast(idProdutoEmEdicao ? 'Produto atualizado' : 'Produto cadastrado');
     }
   }
 
-  /** Salva o produto e trata o caso de LocalStorage cheio. Retorna true se deu certo. */
-  function salvarComTratamento(produto) {
+  /** Salva o produto no servidor e atualiza a lista. Retorna true se deu certo. */
+  async function salvarComTratamento(produto) {
     try {
-      armazenamento.salvarProduto(produto);
+      armazenamento.salvarProduto(await api.salvarProduto(produto));
       renderizarProdutos();
       return true;
     } catch (erro) {
       // Com o formulário aberto o erro aparece nele; na lista, só um alerta fica visível
-      if (elementos.janelaProduto.open) {
-        mostrarErroProduto(erro.message);
-      } else {
-        alert(erro.message);
-      }
+      tratarErroDoServidor(erro, (mensagem) => {
+        if (elementos.janelaProduto.open) {
+          mostrarErroProduto(mensagem);
+        } else {
+          alert(mensagem);
+        }
+      });
       return false;
     }
   }
@@ -317,7 +422,7 @@
     linha.remove();
   }
 
-  function salvarContatos(evento) {
+  async function salvarContatos(evento) {
     evento.preventDefault();
     const contatosDigitados = [...elementos.listaContatos.querySelectorAll('.linha-contato-admin')].map(
       (linha) => ({
@@ -329,13 +434,26 @@
     );
 
     const resultado = contatos.validarContatos(contatosDigitados);
-    elementos.erroContatos.textContent = resultado.erro || '';
-    elementos.erroContatos.classList.toggle('oculto', !resultado.erro);
+    mostrarErroContatos(resultado.erro || '');
     if (resultado.erro) return;
 
-    armazenamento.salvarConfiguracao({ contatosWhatsApp: resultado.contatos });
-    preencherContatos();
-    componentes.mostrarToast('Contatos salvos');
+    const botaoSalvar = evento.target.querySelector('button[type="submit"]');
+    botaoSalvar.disabled = true;
+    try {
+      const contatosSalvos = await api.salvarContatos(resultado.contatos);
+      armazenamento.salvarConfiguracao({ contatosWhatsApp: contatosSalvos, origemServidor: true });
+      preencherContatos();
+      componentes.mostrarToast('Contatos salvos');
+    } catch (erro) {
+      tratarErroDoServidor(erro, mostrarErroContatos);
+    } finally {
+      botaoSalvar.disabled = false;
+    }
+  }
+
+  function mostrarErroContatos(mensagem) {
+    elementos.erroContatos.textContent = mensagem;
+    elementos.erroContatos.classList.toggle('oculto', !mensagem);
   }
 
   // ---------- Configurações ----------
@@ -346,28 +464,72 @@
     preencherContatos();
   }
 
-  function salvarConfiguracoes(evento) {
+  async function salvarConfiguracoes(evento) {
     evento.preventDefault();
     const elementoErro = document.getElementById('erro-configuracao');
+    const mostrarErro = (mensagem) => {
+      elementoErro.textContent = mensagem;
+      elementoErro.classList.toggle('oculto', !mensagem);
+    };
     const valorMinimo = lerValorMonetario(document.getElementById('campo-valor-minimo').value || '0');
 
-    let mensagemErro = '';
     if (!Number.isFinite(valorMinimo) || valorMinimo < 0) {
-      mensagemErro = 'Informe um valor mínimo válido (ex.: 300,00).';
+      mostrarErro('Informe um valor mínimo válido (ex.: 300,00).');
+      return;
     }
+    mostrarErro('');
 
-    elementoErro.textContent = mensagemErro;
-    elementoErro.classList.toggle('oculto', !mensagemErro);
-    if (mensagemErro) return;
-
-    armazenamento.salvarConfiguracao({
-      valorMinimo: Math.round(valorMinimo * 100) / 100,
-    });
-    preencherConfiguracoes();
-    componentes.mostrarToast('Configurações salvas');
+    const botaoSalvar = evento.target.querySelector('button[type="submit"]');
+    botaoSalvar.disabled = true;
+    try {
+      const valorSalvo = await api.salvarValorMinimo(Math.round(valorMinimo * 100) / 100);
+      armazenamento.salvarConfiguracao({ valorMinimo: valorSalvo, origemServidor: true });
+      document.getElementById('campo-valor-minimo').value = String(valorSalvo).replace('.', ',');
+      componentes.mostrarToast('Configurações salvas');
+    } catch (erro) {
+      tratarErroDoServidor(erro, mostrarErro);
+    } finally {
+      botaoSalvar.disabled = false;
+    }
   }
 
-  // ---------- Exportar / restaurar ----------
+  // ---------- Troca de senha ----------
+
+  async function trocarSenha(evento) {
+    evento.preventDefault();
+    const campoSenhaAtual = document.getElementById('campo-senha-atual');
+    const campoNovaSenha = document.getElementById('campo-nova-senha');
+    const campoConfirmacao = document.getElementById('campo-confirmar-senha');
+    const elementoErro = document.getElementById('erro-senha');
+    const mostrarErro = (mensagem) => {
+      elementoErro.textContent = mensagem;
+      elementoErro.classList.toggle('oculto', !mensagem);
+    };
+
+    if (campoNovaSenha.value.length < 10) {
+      mostrarErro('A nova senha precisa ter pelo menos 10 caracteres.');
+      return;
+    }
+    if (campoNovaSenha.value !== campoConfirmacao.value) {
+      mostrarErro('A nova senha e a repetição não conferem.');
+      return;
+    }
+    mostrarErro('');
+
+    const botaoSalvar = evento.target.querySelector('button[type="submit"]');
+    botaoSalvar.disabled = true;
+    try {
+      await api.trocarSenha(campoSenhaAtual.value, campoNovaSenha.value);
+      evento.target.reset();
+      componentes.mostrarToast('Senha trocada');
+    } catch (erro) {
+      tratarErroDoServidor(erro, mostrarErro);
+    } finally {
+      botaoSalvar.disabled = false;
+    }
+  }
+
+  // ---------- Cópia de segurança ----------
 
   function exportarCatalogo() {
     const conteudoArquivo = armazenamento.gerarArquivoDadosIniciais();
@@ -378,18 +540,7 @@
     link.click();
     // Pequeno atraso para o navegador iniciar o download antes de liberar a memória
     setTimeout(() => URL.revokeObjectURL(link.href), 1000);
-    componentes.mostrarToast('Arquivo exportado');
-  }
-
-  function restaurarExemplo() {
-    const confirmou = confirm(
-      'Isso apaga os produtos e configurações deste navegador e volta aos dados de exemplo. Continuar?',
-    );
-    if (!confirmou) return;
-    armazenamento.restaurarDadosIniciais();
-    renderizarProdutos();
-    preencherConfiguracoes();
-    componentes.mostrarToast('Dados de exemplo restaurados');
+    componentes.mostrarToast('Cópia de segurança baixada');
   }
 
   raiz.Loja.telaAdmin = { iniciar };
