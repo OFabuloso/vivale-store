@@ -1,13 +1,13 @@
 <?php
 /**
  * PUT api/admin/configuracao.php — salva o valor mínimo do pedido. Corpo: { valorMinimo }.
- * Precisa de login.
+ * Só o dono.
  */
 declare(strict_types=1);
 
 require __DIR__ . '/../nucleo/inicio.php';
 
-$usuario = exigirUsuarioLogado();
+$usuario = exigirDono();
 if (metodoDaRequisicao() !== 'PUT') {
     recusarMetodo();
 }

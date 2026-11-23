@@ -2,7 +2,7 @@
 /**
  * Produtos do catálogo (precisa de login).
  *   POST   → cria ou atualiza; corpo com os campos do produto (sem "id" = produto novo)
- *   DELETE → api/admin/produtos.php?id=prd-...
+ *   DELETE → api/admin/produtos.php?id=prd-... (só o dono; o funcionário pode inativar)
  */
 declare(strict_types=1);
 
@@ -22,6 +22,9 @@ switch (metodoDaRequisicao()) {
         responderJson(['produto' => $produtoSalvo]);
 
     case 'DELETE':
+        if ($usuario['papel'] !== PAPEL_DONO) {
+            throw new ErroDaApi(403, 'Só o dono da loja pode excluir produtos. Você pode inativar o produto.');
+        }
         $idProduto = $_GET['id'] ?? '';
         if (!identificadorEhValido($idProduto)) {
             throw new ErroDaApi(422, 'Identificador de produto inválido.');

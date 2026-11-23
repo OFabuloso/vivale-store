@@ -8,6 +8,8 @@ const TEMPO_MAXIMO_PARADO_SEGUNDOS = 2 * 60 * 60;
 const JANELA_TENTATIVAS_MINUTOS = 15;
 const LIMITE_TENTATIVAS_POR_USUARIO = 5;
 const LIMITE_TENTATIVAS_POR_IP = 20;
+const PAPEL_DONO = 'dono';
+const PAPEL_FUNCIONARIO = 'funcionario';
 
 function iniciarSessao(): void
 {
@@ -112,6 +114,16 @@ function exigirUsuarioLogado(): array
     }
     if (metodoDaRequisicao() !== 'GET') {
         exigirTokenCsrf();
+    }
+    return $usuario;
+}
+
+/** Como exigirUsuarioLogado, mas só deixa passar o dono (equipe, contatos, configurações e exclusões). */
+function exigirDono(): array
+{
+    $usuario = exigirUsuarioLogado();
+    if ($usuario['papel'] !== PAPEL_DONO) {
+        throw new ErroDaApi(403, 'Só o dono da loja pode fazer isso.');
     }
     return $usuario;
 }

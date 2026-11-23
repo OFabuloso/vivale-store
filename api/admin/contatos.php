@@ -1,13 +1,13 @@
 <?php
 /**
  * PUT api/admin/contatos.php — salva a lista inteira de contatos de WhatsApp
- * (nome, número e ligado/desligado). Corpo: { contatos: [...] }. Precisa de login.
+ * (nome, número e ligado/desligado). Corpo: { contatos: [...] }. Só o dono.
  */
 declare(strict_types=1);
 
 require __DIR__ . '/../nucleo/inicio.php';
 
-$usuario = exigirUsuarioLogado();
+$usuario = exigirDono();
 if (metodoDaRequisicao() !== 'PUT') {
     recusarMetodo();
 }

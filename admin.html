@@ -15,7 +15,7 @@
     <link rel="icon" href="img/marca/favicon.ico" sizes="any" />
     <link rel="icon" type="image/png" href="img/marca/favicon-32.png" sizes="32x32" />
     <link rel="apple-touch-icon" href="img/marca/apple-touch-icon.png" />
-    <link rel="stylesheet" href="css/estilos.css?v=3" />
+    <link rel="stylesheet" href="css/estilos.css?v=4" />
   </head>
   <body>
     <!-- Login (usuário e senha conferidos no servidor) -->
@@ -53,6 +53,7 @@
         <div class="abas" role="tablist">
           <button class="aba" type="button" role="tab" aria-selected="true" data-aba="aba-produtos">Produtos</button>
           <button class="aba" type="button" role="tab" aria-selected="false" data-aba="aba-configuracoes">Configurações</button>
+          <button class="aba oculto" type="button" role="tab" aria-selected="false" data-aba="aba-equipe" data-somente-dono>Equipe</button>
         </div>
 
         <!-- Aba: Produtos -->
@@ -66,7 +67,7 @@
 
         <!-- Aba: Configurações -->
         <section class="oculto" id="aba-configuracoes" role="tabpanel">
-          <form class="cartao secao-config" id="formulario-contatos" novalidate>
+          <form class="cartao secao-config oculto" id="formulario-contatos" novalidate data-somente-dono>
             <h2>Contatos do WhatsApp</h2>
             <p>
               Ao finalizar o pedido, a cliente escolhe com qual destes contatos quer falar.
@@ -81,7 +82,7 @@
             <button class="botao botao-primario botao-largo margem-topo" type="submit">Salvar contatos</button>
           </form>
 
-          <form class="cartao secao-config" id="formulario-configuracao" novalidate>
+          <form class="cartao secao-config oculto" id="formulario-configuracao" novalidate data-somente-dono>
             <h2>Configurações da loja</h2>
             <p>Valem para o carrinho.</p>
             <div class="campo">
@@ -110,7 +111,7 @@
             <button class="botao botao-primario botao-largo" type="submit">Trocar senha</button>
           </form>
 
-          <div class="cartao secao-config">
+          <div class="cartao secao-config oculto" data-somente-dono>
             <h2>Cópia de segurança</h2>
             <p>
               As alterações já valem para as clientes assim que você salva. Este arquivo é uma cópia do
@@ -120,6 +121,40 @@
             <div class="grupo-botoes">
               <button class="botao botao-contorno" id="botao-exportar" type="button">Baixar cópia de segurança</button>
             </div>
+          </div>
+        </section>
+
+        <!-- Aba: Equipe (só o dono) -->
+        <section class="oculto" id="aba-equipe" role="tabpanel">
+          <form class="cartao secao-config" id="formulario-novo-funcionario" novalidate>
+            <h2>Cadastrar funcionário</h2>
+            <p>
+              O funcionário entra no painel com o próprio usuário e senha. Ele pode cadastrar, editar e
+              inativar produtos e trocar a própria senha. Excluir produtos, contatos, configurações e a
+              equipe ficam só com você.
+            </p>
+            <div class="linha-campos">
+              <div class="campo">
+                <label for="funcionario-nome">Nome</label>
+                <input type="text" id="funcionario-nome" maxlength="80" placeholder="Ex.: Ana Souza" required />
+              </div>
+              <div class="campo">
+                <label for="funcionario-usuario">Usuário (para entrar)</label>
+                <input type="text" id="funcionario-usuario" maxlength="40" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="Ex.: ana" required />
+              </div>
+            </div>
+            <div class="campo">
+              <label for="funcionario-senha">Senha inicial (mínimo 10 caracteres)</label>
+              <input type="password" id="funcionario-senha" autocomplete="new-password" minlength="10" required />
+            </div>
+            <p class="mensagem-erro oculto" id="erro-novo-funcionario"></p>
+            <button class="botao botao-primario botao-largo" type="submit">Cadastrar funcionário</button>
+          </form>
+
+          <div class="cartao secao-config">
+            <h2>Equipe</h2>
+            <p>Funcionário desativado perde o acesso na hora. Você pode reativá-lo depois.</p>
+            <div class="lista-contatos-admin" id="lista-equipe"></div>
           </div>
         </section>
       </main>
@@ -192,15 +227,35 @@
       </form>
     </dialog>
 
+    <!-- Nova senha de um funcionário (só o dono) -->
+    <dialog class="janela" id="janela-senha-funcionario" aria-labelledby="titulo-senha-funcionario">
+      <form class="formulario-janela" id="formulario-senha-funcionario" novalidate>
+        <div class="janela-cabecalho">
+          <h2 id="titulo-senha-funcionario">Nova senha</h2>
+          <button class="botao-fechar" type="button" data-fechar aria-label="Fechar">×</button>
+        </div>
+        <div class="janela-corpo">
+          <div class="campo">
+            <label for="funcionario-nova-senha">Nova senha (mínimo 10 caracteres)</label>
+            <input type="password" id="funcionario-nova-senha" autocomplete="new-password" minlength="10" required />
+          </div>
+          <p class="mensagem-erro oculto" id="erro-senha-funcionario"></p>
+        </div>
+        <div class="janela-rodape">
+          <button class="botao botao-primario botao-largo" type="submit">Salvar nova senha</button>
+        </div>
+      </form>
+    </dialog>
+
     <!-- Ordem importa: dados → lógica → telas → página -->
-    <script src="js/dados/dados-iniciais.js?v=3"></script>
-    <script src="js/logica/utilidades.js?v=3"></script>
-    <script src="js/logica/contatos.js?v=3"></script>
-    <script src="js/logica/armazenamento.js?v=3"></script>
-    <script src="js/logica/api.js?v=3"></script>
-    <script src="js/logica/imagem.js?v=3"></script>
-    <script src="js/telas/componentes.js?v=3"></script>
-    <script src="js/telas/tela-admin.js?v=3"></script>
-    <script src="js/paginas/pagina-admin.js?v=3"></script>
+    <script src="js/dados/dados-iniciais.js?v=4"></script>
+    <script src="js/logica/utilidades.js?v=4"></script>
+    <script src="js/logica/contatos.js?v=4"></script>
+    <script src="js/logica/armazenamento.js?v=4"></script>
+    <script src="js/logica/api.js?v=4"></script>
+    <script src="js/logica/imagem.js?v=4"></script>
+    <script src="js/telas/componentes.js?v=4"></script>
+    <script src="js/telas/tela-admin.js?v=4"></script>
+    <script src="js/paginas/pagina-admin.js?v=4"></script>
   </body>
 </html>

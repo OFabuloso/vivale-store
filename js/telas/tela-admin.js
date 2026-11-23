@@ -1,5 +1,7 @@
 /**
- * Painel do Vendedor: CRUD de produtos, contatos do WhatsApp e configurações da loja.
+ * Painel do Vendedor: CRUD de produtos, contatos do WhatsApp, configurações da loja e equipe.
+ *
+ * O dono vê tudo; o funcionário cadastra, edita e inativa produtos e troca a própria senha.
  *
  * Tudo é salvo no servidor (api/admin/*) e vale para as clientes na hora.
  * O login é conferido no servidor; o navegador guarda só uma cópia para desenhar as telas.
@@ -13,6 +15,9 @@
   const elementos = {};
   let idProdutoEmEdicao = null;
   let fotoAtual = '';
+  // Quem está logado: o papel ("dono" ou "funcionario") decide o que aparece no painel
+  let usuarioLogado = null;
+  let idFuncionarioEmEdicao = null;
 
   function iniciar() {
     elementos.telaLogin = document.getElementById('tela-login');
@@ -61,6 +66,13 @@
     document.getElementById('formulario-configuracao').addEventListener('submit', salvarConfiguracoes);
     document.getElementById('formulario-senha').addEventListener('submit', trocarSenha);
     document.getElementById('botao-exportar').addEventListener('click', exportarCatalogo);
+
+    elementos.listaEquipe = document.getElementById('lista-equipe');
+    elementos.janelaSenhaFuncionario = document.getElementById('janela-senha-funcionario');
+    elementos.listaEquipe.addEventListener('click', tratarAcaoFuncionario);
+    document.getElementById('formulario-novo-funcionario').addEventListener('submit', cadastrarFuncionario);
+    document.getElementById('formulario-senha-funcionario').addEventListener('submit', salvarSenhaFuncionario);
+    componentes.configurarJanela(elementos.janelaSenhaFuncionario);
 
     verificarSessao();
   }
@@ -172,10 +184,25 @@
   async function abrirPainel() {
     const dadosDoPainel = await api.carregarPainel();
     armazenamento.aplicarCatalogoDoServidor(dadosDoPainel);
+    usuarioLogado = dadosDoPainel.usuario;
     elementos.telaLogin.classList.add('oculto');
     elementos.painel.classList.remove('oculto');
+    aplicarPermissoes();
+    selecionarAba('aba-produtos');
     renderizarProdutos();
     preencherConfiguracoes();
+    if (ehDono()) carregarEquipe();
+  }
+
+  function ehDono() {
+    return Boolean(usuarioLogado) && usuarioLogado.papel === 'dono';
+  }
+
+  /** Mostra as partes marcadas com data-somente-dono só para o dono (o servidor também confere). */
+  function aplicarPermissoes() {
+    document.querySelectorAll('[data-somente-dono]').forEach((elemento) => {
+      elemento.classList.toggle('oculto', !ehDono());
+    });
   }
 
   /** Sessão expirada volta para o login; outros erros só mostram a mensagem. */
@@ -188,9 +215,12 @@
   }
 
   function trocarAba(evento) {
-    const abaClicada = evento.currentTarget;
+    selecionarAba(evento.currentTarget.dataset.aba);
+  }
+
+  function selecionarAba(idAba) {
     document.querySelectorAll('.aba').forEach((aba) => {
-      const selecionada = aba === abaClicada;
+      const selecionada = aba.dataset.aba === idAba;
       aba.setAttribute('aria-selected', String(selecionada));
       document.getElementById(aba.dataset.aba).classList.toggle('oculto', !selecionada);
     });
@@ -226,7 +256,7 @@
           <div class="acoes-produto-admin">
             <button class="botao botao-contorno botao-pequeno" type="button" data-acao="editar">Editar</button>
             <button class="botao botao-contorno botao-pequeno" type="button" data-acao="alternar">${ativo ? 'Inativar' : 'Ativar'}</button>
-            <button class="botao botao-perigo botao-pequeno" type="button" data-acao="excluir">Excluir</button>
+            ${ehDono() ? '<button class="botao botao-perigo botao-pequeno" type="button" data-acao="excluir">Excluir</button>' : ''}
           </div>
         </div>
       </article>`;
@@ -571,6 +601,128 @@
       evento.target.reset();
       esconderSenhas();
       componentes.mostrarToast('Senha trocada');
+    } catch (erro) {
+      tratarErroDoServidor(erro, mostrarErro);
+    } finally {
+      botaoSalvar.disabled = false;
+    }
+  }
+
+  // ---------- Equipe (só o dono) ----------
+
+  async function carregarEquipe() {
+    try {
+      renderizarEquipe(await api.listarEquipe());
+    } catch (erro) {
+      tratarErroDoServidor(erro, (mensagem) => {
+        elementos.listaEquipe.innerHTML = `<p class="mensagem-erro">${escaparHtml(mensagem)}</p>`;
+      });
+    }
+  }
+
+  function renderizarEquipe(usuarios) {
+    elementos.listaEquipe.innerHTML = usuarios.map(montarHtmlLinhaFuncionario).join('');
+  }
+
+  function montarHtmlLinhaFuncionario(usuario) {
+    const ehFuncionario = usuario.papel === 'funcionario';
+    const ultimoAcesso = usuario.ultimoAcesso
+      ? new Date(usuario.ultimoAcesso.replace(' ', 'T')).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
+      : 'nunca entrou';
+    const acoes = ehFuncionario
+      ? `<div class="grupo-botoes">
+          <button class="botao botao-contorno botao-pequeno" type="button" data-acao="nova-senha">Nova senha</button>
+          <button class="botao botao-contorno botao-pequeno" type="button" data-acao="alternar-funcionario">${usuario.ativo ? 'Desativar' : 'Reativar'}</button>
+        </div>`
+      : '';
+    return `
+      <div class="linha-funcionario-admin ${usuario.ativo ? '' : 'desativado'}" data-id-funcionario="${usuario.id}"
+        data-nome="${escaparHtml(usuario.nome)}" data-ativo="${usuario.ativo}">
+        <div>
+          <strong>${escaparHtml(usuario.nome)}</strong>
+          <span class="etiqueta">${ehFuncionario ? 'Funcionário' : 'Dono'}</span>
+          ${usuario.ativo ? '' : '<span class="etiqueta">Desativado</span>'}
+          <p>Usuário: ${escaparHtml(usuario.usuario)} · último acesso: ${escaparHtml(ultimoAcesso)}</p>
+        </div>
+        ${acoes}
+      </div>`;
+  }
+
+  function mostrarErroEm(idElemento, mensagem) {
+    const elementoErro = document.getElementById(idElemento);
+    elementoErro.textContent = mensagem;
+    elementoErro.classList.toggle('oculto', !mensagem);
+  }
+
+  async function cadastrarFuncionario(evento) {
+    evento.preventDefault();
+    const nome = document.getElementById('funcionario-nome').value.trim();
+    const usuario = document.getElementById('funcionario-usuario').value.trim().toLowerCase();
+    const senha = document.getElementById('funcionario-senha').value;
+    const mostrarErro = (mensagem) => mostrarErroEm('erro-novo-funcionario', mensagem);
+
+    if (!nome) return mostrarErro('Informe o nome do funcionário.');
+    if (!/^[a-z0-9._-]{3,40}$/.test(usuario)) {
+      return mostrarErro('O usuário deve ter de 3 a 40 letras minúsculas, números, ponto, hífen ou sublinhado (sem espaço nem acento).');
+    }
+    if (senha.length < 10) return mostrarErro('A senha precisa ter pelo menos 10 caracteres.');
+    mostrarErro('');
+
+    const botaoSalvar = evento.target.querySelector('button[type="submit"]');
+    botaoSalvar.disabled = true;
+    try {
+      renderizarEquipe(await api.cadastrarFuncionario(usuario, nome, senha));
+      evento.target.reset();
+      esconderSenhas();
+      componentes.mostrarToast(`${nome} cadastrado`);
+    } catch (erro) {
+      tratarErroDoServidor(erro, mostrarErro);
+    } finally {
+      botaoSalvar.disabled = false;
+    }
+  }
+
+  async function tratarAcaoFuncionario(evento) {
+    const botao = evento.target.closest('button[data-acao]');
+    if (!botao) return;
+    const linha = botao.closest('[data-id-funcionario]');
+    const idFuncionario = Number(linha.dataset.idFuncionario);
+    const nomeFuncionario = linha.dataset.nome;
+
+    if (botao.dataset.acao === 'nova-senha') {
+      idFuncionarioEmEdicao = idFuncionario;
+      document.getElementById('formulario-senha-funcionario').reset();
+      esconderSenhas();
+      mostrarErroEm('erro-senha-funcionario', '');
+      document.getElementById('titulo-senha-funcionario').textContent = `Nova senha de ${nomeFuncionario}`;
+      elementos.janelaSenhaFuncionario.showModal();
+      document.getElementById('funcionario-nova-senha').focus();
+    } else if (botao.dataset.acao === 'alternar-funcionario') {
+      const vaiDesativar = linha.dataset.ativo === 'true';
+      if (vaiDesativar && !confirm(`Desativar ${nomeFuncionario}? A pessoa perde o acesso ao painel na hora.`)) return;
+      botao.disabled = true;
+      try {
+        renderizarEquipe(await api.alterarFuncionario({ id: idFuncionario, ativo: !vaiDesativar }));
+        componentes.mostrarToast(vaiDesativar ? `${nomeFuncionario} desativado` : `${nomeFuncionario} reativado`);
+      } catch (erro) {
+        botao.disabled = false;
+        tratarErroDoServidor(erro, (mensagem) => alert(mensagem));
+      }
+    }
+  }
+
+  async function salvarSenhaFuncionario(evento) {
+    evento.preventDefault();
+    const novaSenha = document.getElementById('funcionario-nova-senha').value;
+    const mostrarErro = (mensagem) => mostrarErroEm('erro-senha-funcionario', mensagem);
+    if (novaSenha.length < 10) return mostrarErro('A senha precisa ter pelo menos 10 caracteres.');
+
+    const botaoSalvar = evento.target.querySelector('button[type="submit"]');
+    botaoSalvar.disabled = true;
+    try {
+      renderizarEquipe(await api.alterarFuncionario({ id: idFuncionarioEmEdicao, novaSenha }));
+      elementos.janelaSenhaFuncionario.close();
+      componentes.mostrarToast('Senha redefinida');
     } catch (erro) {
       tratarErroDoServidor(erro, mostrarErro);
     } finally {

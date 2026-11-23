@@ -198,6 +198,97 @@ test('depois de sair, a sessão não vale mais', async () => {
   assert.equal((await navegador.requisitar('api/admin/painel.php')).status, 401);
 });
 
+// ---------- Equipe e papéis ----------
+
+const USUARIO_FUNCIONARIO = 'teste-funcionario';
+
+test('o dono cadastra um funcionário, que só mexe em produtos', async () => {
+  rodarSql(`DELETE FROM usuarios WHERE usuario = '${USUARIO_FUNCIONARIO}'`);
+  const dono = criarNavegador();
+  await dono.entrar();
+
+  const cadastro = await dono.requisitar('api/admin/usuarios.php', {
+    metodo: 'POST',
+    corpo: { usuario: USUARIO_FUNCIONARIO, nome: 'Funcionário de Teste', senha: 'senha-funcionario-1' },
+  });
+  assert.equal(cadastro.status, 201);
+  const funcionario = cadastro.dados.usuarios.find((usuario) => usuario.usuario === USUARIO_FUNCIONARIO);
+  assert.equal(funcionario.papel, 'funcionario');
+  assert.equal(funcionario.ativo, true);
+  assert.ok(!('senha_hash' in funcionario));
+
+  const repetido = await dono.requisitar('api/admin/usuarios.php', {
+    metodo: 'POST',
+    corpo: { usuario: USUARIO_FUNCIONARIO, nome: 'Outro', senha: 'senha-funcionario-1' },
+  });
+  assert.equal(repetido.status, 409);
+
+  const navegadorFuncionario = criarNavegador();
+  assert.equal((await navegadorFuncionario.entrar(USUARIO_FUNCIONARIO, 'senha-funcionario-1')).status, 200);
+  const painel = await navegadorFuncionario.requisitar('api/admin/painel.php');
+  assert.equal(painel.dados.usuario.papel, 'funcionario');
+
+  // Cadastra e edita produto, mas não exclui
+  const criado = await navegadorFuncionario.requisitar('api/admin/produtos.php', {
+    metodo: 'POST',
+    corpo: { nome: 'Blusa do Funcionário', categoria: 'Blusas', preco: 40, tamanhos: ['M'], cores: ['Azul'] },
+  });
+  assert.equal(criado.status, 200);
+  const idProduto = criado.dados.produto.id;
+  const exclusao = await navegadorFuncionario.requisitar(`api/admin/produtos.php?id=${idProduto}`, { metodo: 'DELETE' });
+  assert.equal(exclusao.status, 403);
+
+  // Contatos, configurações e equipe ficam só com o dono
+  const recusas = [
+    ['api/admin/contatos.php', 'PUT', { contatos: [] }],
+    ['api/admin/configuracao.php', 'PUT', { valorMinimo: 1 }],
+    ['api/admin/usuarios.php', 'GET', undefined],
+    ['api/admin/usuarios.php', 'POST', { usuario: 'intruso', nome: 'Intruso', senha: 'senha-intruso-1' }],
+  ];
+  for (const [caminho, metodo, corpo] of recusas) {
+    const { status } = await navegadorFuncionario.requisitar(caminho, { metodo, corpo });
+    assert.equal(status, 403, `${metodo} ${caminho}`);
+  }
+
+  // A senha própria o funcionário troca
+  const trocaDeSenha = await navegadorFuncionario.requisitar('api/admin/senha.php', {
+    metodo: 'POST',
+    corpo: { senhaAtual: 'senha-funcionario-1', novaSenha: 'senha-funcionario-2' },
+  });
+  assert.equal(trocaDeSenha.status, 200);
+
+  assert.equal((await dono.requisitar(`api/admin/produtos.php?id=${idProduto}`, { metodo: 'DELETE' })).status, 200);
+});
+
+test('o dono redefine a senha e desativa o funcionário, que perde o acesso na hora', async () => {
+  const dono = criarNavegador();
+  await dono.entrar();
+  const { usuarios } = (await dono.requisitar('api/admin/usuarios.php')).dados;
+  const funcionario = usuarios.find((usuario) => usuario.usuario === USUARIO_FUNCIONARIO);
+  const donoDaLista = usuarios.find((usuario) => usuario.usuario === USUARIO_TESTE);
+
+  const senhaCurta = await dono.requisitar('api/admin/usuarios.php', { metodo: 'PUT', corpo: { id: funcionario.id, novaSenha: 'curta' } });
+  assert.equal(senhaCurta.status, 422);
+  const redefinida = await dono.requisitar('api/admin/usuarios.php', {
+    metodo: 'PUT',
+    corpo: { id: funcionario.id, novaSenha: 'senha-redefinida-1' },
+  });
+  assert.equal(redefinida.status, 200);
+
+  const navegadorFuncionario = criarNavegador();
+  assert.equal((await navegadorFuncionario.entrar(USUARIO_FUNCIONARIO, 'senha-redefinida-1')).status, 200);
+
+  await dono.requisitar('api/admin/usuarios.php', { metodo: 'PUT', corpo: { id: funcionario.id, ativo: false } });
+  assert.equal((await navegadorFuncionario.requisitar('api/admin/painel.php')).status, 401);
+  assert.equal((await criarNavegador().entrar(USUARIO_FUNCIONARIO, 'senha-redefinida-1')).status, 401);
+
+  // O dono não é alterado pela tela de equipe
+  const alterarDono = await dono.requisitar('api/admin/usuarios.php', { metodo: 'PUT', corpo: { id: donoDaLista.id, ativo: false } });
+  assert.equal(alterarDono.status, 404);
+
+  rodarSql(`DELETE FROM usuarios WHERE usuario = '${USUARIO_FUNCIONARIO}'`);
+});
+
 // ---------- Produtos, contatos e configurações ----------
 
 test('cria, edita, inativa e exclui um produto; a loja vê cada mudança na hora', async () => {

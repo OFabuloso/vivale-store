@@ -141,6 +141,22 @@
     return requisitar('api/admin/senha.php', { metodo: 'POST', corpo: { senhaAtual, novaSenha } });
   }
 
+  // ---------- Equipe (só o dono) ----------
+
+  async function listarEquipe() {
+    return (await requisitar('api/admin/usuarios.php')).usuarios;
+  }
+
+  async function cadastrarFuncionario(usuario, nome, senha) {
+    const corpo = { usuario, nome, senha };
+    return (await requisitar('api/admin/usuarios.php', { metodo: 'POST', corpo })).usuarios;
+  }
+
+  /** Altera um funcionário: { id, ativo } para ativar/desativar ou { id, novaSenha } para redefinir a senha. */
+  async function alterarFuncionario(alteracao) {
+    return (await requisitar('api/admin/usuarios.php', { metodo: 'PUT', corpo: alteracao })).usuarios;
+  }
+
   const api = {
     ErroDaApi,
     requisitar,
@@ -156,6 +172,9 @@
     salvarValorMinimo,
     enviarFoto,
     trocarSenha,
+    listarEquipe,
+    cadastrarFuncionario,
+    alterarFuncionario,
   };
 
   if (typeof module !== 'undefined' && module.exports) {
