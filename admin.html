@@ -15,7 +15,7 @@
     <link rel="icon" href="img/marca/favicon.ico" sizes="any" />
     <link rel="icon" type="image/png" href="img/marca/favicon-32.png" sizes="32x32" />
     <link rel="apple-touch-icon" href="img/marca/apple-touch-icon.png" />
-    <link rel="stylesheet" href="css/estilos.css?v=7" />
+    <link rel="stylesheet" href="css/estilos.css?v=8" />
   </head>
   <body>
     <!-- Login (usuário e senha conferidos no servidor) -->
@@ -60,6 +60,13 @@
       <header class="cabecalho">
         <a class="logo" href="index.html"><img class="logo-monograma" src="img/marca/monograma.png" alt="" width="36" height="36" />Vivale <span>Admin</span></a>
         <div class="grupo-botoes">
+          <button class="botao-icone botao-icone-estoque" id="botao-alertas-estoque" type="button" aria-label="Estoque: nenhum item no mínimo">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+              <path d="M3.5 7.5 12 3l8.5 4.5v9L12 21l-8.5-4.5z" stroke-linejoin="round" />
+              <path d="M3.5 7.5 12 12l8.5-4.5M12 12v9" stroke-linejoin="round" />
+            </svg>
+            <span class="contador-carrinho oculto" id="contador-alertas-estoque"></span>
+          </button>
           <a class="botao botao-contorno botao-pequeno" href="index.html" target="_blank" rel="noopener">Ver loja</a>
           <button class="botao botao-contorno botao-pequeno" id="botao-sair" type="button">Sair</button>
         </div>
@@ -326,12 +333,40 @@
             </div>
           </div>
 
+          <fieldset class="campo secao-estoque">
+            <legend>Estoque</legend>
+            <div class="opcoes-checkbox">
+              <label><input type="checkbox" id="produto-controla-estoque" /> Controlar o estoque deste produto</label>
+            </div>
+            <div class="oculto" id="produto-bloco-estoque">
+              <p class="campo-ajuda">Quantas peças há de cada tamanho e cor. Na loja, o que estiver em 0 aparece como "Esgotado".</p>
+              <div class="grade-estoque" id="produto-grade-estoque"></div>
+              <div class="campo campo-alerta-estoque">
+                <label for="produto-alerta-estoque">Avisar quando chegar em (peças)</label>
+                <input type="number" id="produto-alerta-estoque" min="0" step="1" inputmode="numeric" />
+              </div>
+            </div>
+          </fieldset>
+
           <p class="mensagem-erro oculto" id="erro-produto"></p>
         </div>
         <div class="janela-rodape">
           <button class="botao botao-primario botao-largo" type="submit">Salvar produto</button>
         </div>
       </form>
+    </dialog>
+
+    <!-- Itens no estoque mínimo (ícone do cabeçalho) -->
+    <dialog class="janela" id="janela-alertas-estoque" aria-labelledby="titulo-alertas-estoque">
+      <div class="formulario-janela">
+        <div class="janela-cabecalho">
+          <h2 id="titulo-alertas-estoque">Estoque no mínimo</h2>
+          <button class="botao-fechar" type="button" data-fechar aria-label="Fechar">×</button>
+        </div>
+        <div class="janela-corpo">
+          <div class="lista-alertas-estoque" id="lista-alertas-estoque"></div>
+        </div>
+      </div>
     </dialog>
 
     <!-- Nova senha de um funcionário (só o dono) -->
@@ -355,15 +390,16 @@
     </dialog>
 
     <!-- Ordem importa: dados → lógica → telas → página -->
-    <script src="js/dados/dados-iniciais.js?v=7"></script>
-    <script src="js/logica/utilidades.js?v=7"></script>
-    <script src="js/logica/contatos.js?v=7"></script>
-    <script src="js/logica/armazenamento.js?v=7"></script>
-    <script src="js/logica/api.js?v=7"></script>
-    <script src="js/logica/imagem.js?v=7"></script>
-    <script src="js/telas/componentes.js?v=7"></script>
-    <script src="js/vendor/qrcode-generator.js?v=7"></script>
-    <script src="js/telas/tela-admin.js?v=7"></script>
-    <script src="js/paginas/pagina-admin.js?v=7"></script>
+    <script src="js/dados/dados-iniciais.js?v=8"></script>
+    <script src="js/logica/utilidades.js?v=8"></script>
+    <script src="js/logica/estoque.js?v=8"></script>
+    <script src="js/logica/contatos.js?v=8"></script>
+    <script src="js/logica/armazenamento.js?v=8"></script>
+    <script src="js/logica/api.js?v=8"></script>
+    <script src="js/logica/imagem.js?v=8"></script>
+    <script src="js/telas/componentes.js?v=8"></script>
+    <script src="js/vendor/qrcode-generator.js?v=8"></script>
+    <script src="js/telas/tela-admin.js?v=8"></script>
+    <script src="js/paginas/pagina-admin.js?v=8"></script>
   </body>
 </html>

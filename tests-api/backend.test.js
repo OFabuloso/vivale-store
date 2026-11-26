@@ -724,3 +724,99 @@ test('desativar o 2FA pede senha e código; o dono desliga o 2FA de um funcioná
   assert.ok(entradaSemCodigo.dados.usuario, 'depois de desligado, o funcionário entra só com a senha');
   rodarSql(`UPDATE usuarios SET ativo = 0 WHERE usuario IN ('${USUARIO_2FA}', '${USUARIO_FUNCIONARIO_2FA}')`);
 });
+
+// ---------- Estoque ----------
+
+/** Cria um produto de teste com controle de estoque e devolve o produto salvo. */
+async function criarProdutoComEstoque(navegador, estoque, extras = {}) {
+  const resposta = await navegador.requisitar('api/admin/produtos.php', {
+    metodo: 'POST',
+    corpo: {
+      nome: 'Produto Estoque Teste',
+      categoria: 'Testes',
+      preco: 50,
+      tamanhos: ['P', 'M'],
+      cores: ['Preto'],
+      controlaEstoque: true,
+      alertaEstoque: 2,
+      estoque,
+      estoqueVisto: {},
+      ...extras,
+    },
+  });
+  assert.equal(resposta.status, 200, JSON.stringify(resposta.dados));
+  return resposta.dados.produto;
+}
+
+async function excluirProdutoDeTeste(navegador, idProduto) {
+  await navegador.requisitar(`api/admin/produtos.php?id=${encodeURIComponent(idProduto)}`, { metodo: 'DELETE' });
+}
+
+test('estoque por tamanho e cor: a loja só vê o que está esgotado e o painel avisa o mínimo', async () => {
+  const navegador = criarNavegador();
+  await navegador.entrar();
+  const produto = await criarProdutoComEstoque(navegador, { 'P|Preto': 5, 'M|Preto': 0 });
+  try {
+    assert.deepEqual(produto.estoque, { 'P|Preto': 5, 'M|Preto': 0 });
+    assert.equal(rodarSql(`SELECT COUNT(*) FROM movimentos_estoque WHERE produto_id = '${produto.id}' AND motivo = 'ajuste'`).trim(), '1');
+
+    const naLoja = (await criarNavegador().requisitar('api/catalogo.php')).dados.produtos.find((item) => item.id === produto.id);
+    assert.deepEqual(naLoja.esgotados, ['M|Preto']);
+    assert.equal(naLoja.estoque, undefined, 'a loja não pode ver as quantidades');
+    assert.equal(naLoja.alertaEstoque, undefined);
+
+    const painel = (await navegador.requisitar('api/admin/painel.php')).dados;
+    const alertasDoProduto = painel.alertasEstoque.filter((alerta) => alerta.idProduto === produto.id);
+    assert.deepEqual(alertasDoProduto.map((alerta) => [alerta.tamanho, alerta.quantidade]), [['M', 0]]);
+  } finally {
+    await excluirProdutoDeTeste(navegador, produto.id);
+  }
+});
+
+test('salvar o produto não grava por cima de uma mudança de estoque feita no meio-tempo', async () => {
+  const navegador = criarNavegador();
+  await navegador.entrar();
+  const produto = await criarProdutoComEstoque(navegador, { 'P|Preto': 5, 'M|Preto': 3 });
+  try {
+    // Outra pessoa muda o P para 4 (como uma venda faria)
+    rodarSql(`UPDATE estoque SET quantidade = 4 WHERE produto_id = '${produto.id}' AND tamanho = 'P'`);
+    const base = { ...produto, id: produto.id };
+
+    // Mexer só no M, a partir do que o formulário viu, não desfaz a mudança do P
+    const soNoM = await navegador.requisitar('api/admin/produtos.php', {
+      metodo: 'POST',
+      corpo: { ...base, estoque: { 'P|Preto': 5, 'M|Preto': 10 }, estoqueVisto: { 'P|Preto': 5, 'M|Preto': 3 } },
+    });
+    assert.equal(soNoM.status, 200, JSON.stringify(soNoM.dados));
+    assert.deepEqual(soNoM.dados.produto.estoque, { 'P|Preto': 4, 'M|Preto': 10 });
+
+    // Mexer no P com o número velho é recusado
+    const conflito = await navegador.requisitar('api/admin/produtos.php', {
+      metodo: 'POST',
+      corpo: { ...base, estoque: { 'P|Preto': 8, 'M|Preto': 10 }, estoqueVisto: { 'P|Preto': 5, 'M|Preto': 10 } },
+    });
+    assert.equal(conflito.status, 409);
+    assert.match(conflito.dados.erro, /mudou enquanto você editava/);
+
+    // Inativar (sem mandar estoque) não mexe nas quantidades
+    const inativado = await navegador.requisitar('api/admin/produtos.php', { metodo: 'POST', corpo: { ...base, ativo: false, estoque: undefined } });
+    assert.deepEqual(inativado.dados.produto.estoque, { 'P|Preto': 4, 'M|Preto': 10 });
+
+    // Tirar o tamanho M apaga a variação do estoque
+    const semM = await navegador.requisitar('api/admin/produtos.php', {
+      metodo: 'POST',
+      corpo: { ...base, tamanhos: ['P'], estoque: { 'P|Preto': 4 }, estoqueVisto: { 'P|Preto': 4 } },
+    });
+    assert.deepEqual(semM.dados.produto.estoque, { 'P|Preto': 4 });
+    assert.equal(rodarSql(`SELECT COUNT(*) FROM estoque WHERE produto_id = '${produto.id}'`).trim(), '1');
+
+    const invalido = await navegador.requisitar('api/admin/produtos.php', {
+      metodo: 'POST',
+      corpo: { ...base, tamanhos: ['P'], estoque: { 'P|Preto': -1 }, estoqueVisto: { 'P|Preto': 4 } },
+    });
+    assert.equal(invalido.status, 422);
+  } finally {
+    await excluirProdutoDeTeste(navegador, produto.id);
+  }
+  assert.equal(rodarSql(`SELECT COUNT(*) FROM estoque WHERE produto_id = '${produto.id}'`).trim(), '0', 'excluir o produto apaga o estoque');
+});

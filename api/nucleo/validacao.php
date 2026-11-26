@@ -42,7 +42,8 @@ function validarProduto(array $dados): array
     $tamanhos = array_values(array_intersect(TAMANHOS_PERMITIDOS, (array) ($dados['tamanhos'] ?? [])));
     $cores = [];
     foreach ((array) ($dados['cores'] ?? []) as $cor) {
-        $corLimpa = textoLimpo($cor, 40);
+        // A barra vertical separa tamanho e cor na chave do estoque ("M|Azul")
+        $corLimpa = str_replace('|', '/', textoLimpo($cor, 40));
         if ($corLimpa !== '' && !in_array($corLimpa, $cores, true)) {
             $cores[] = $corLimpa;
         }
@@ -87,7 +88,18 @@ function validarProduto(array $dados): array
         'tamanhos' => $tamanhos,
         'cores' => $cores,
         'ativo' => ($dados['ativo'] ?? true) !== false,
+        'controlaEstoque' => ($dados['controlaEstoque'] ?? false) === true,
+        'alertaEstoque' => validarAlertaDeEstoque($dados['alertaEstoque'] ?? 3),
     ];
+}
+
+/** A partir de quantas peças o painel avisa que o estoque está baixo (0 = só quando zerar). */
+function validarAlertaDeEstoque(mixed $alerta): int
+{
+    if (!is_numeric($alerta) || (int) $alerta != $alerta || $alerta < 0 || $alerta > 10000) {
+        falhaDeValidacao('Informe o aviso de estoque baixo como um número inteiro (ex.: 3).');
+    }
+    return (int) $alerta;
 }
 
 /** Só dígitos; com DDD + número (10 ou 11 dígitos), acrescenta o 55 do Brasil. */

@@ -112,7 +112,7 @@
 
   /**
    * Ajusta os itens ao catálogo atual: atualiza preço e nome e remove itens cujo produto
-   * foi excluído/inativado ou cujo tamanho/cor deixou de ser oferecido.
+   * foi excluído/inativado, cujo tamanho/cor deixou de ser oferecido ou que esgotou.
    * Devolve { itens, houveMudanca } para a tela poder avisar a cliente.
    */
   function sincronizarComCatalogo(itens, produtosAtivos) {
@@ -123,7 +123,10 @@
     itens.forEach((item) => {
       const produto = produtosPorId.get(item.idProduto);
       const variacaoDisponivel =
-        produto && produto.tamanhos.includes(item.tamanho) && produto.cores.includes(item.cor);
+        produto &&
+        produto.tamanhos.includes(item.tamanho) &&
+        produto.cores.includes(item.cor) &&
+        !(produto.esgotados || []).includes(`${item.tamanho}|${item.cor}`);
       if (!variacaoDisponivel) {
         houveMudanca = true;
         return;

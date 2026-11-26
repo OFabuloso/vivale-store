@@ -12,3 +12,4 @@ require __DIR__ . '/sessao.php';
 require __DIR__ . '/autenticador.php';
 require __DIR__ . '/validacao.php';
 require __DIR__ . '/catalogo.php';
+require __DIR__ . '/estoque.php';

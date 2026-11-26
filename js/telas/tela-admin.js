@@ -9,12 +9,14 @@
 (function (raiz) {
   'use strict';
 
-  const { armazenamento, utilidades, componentes, imagem, contatos, api } = raiz.Loja;
+  const { armazenamento, utilidades, componentes, imagem, contatos, api, estoque } = raiz.Loja;
   const { formatarMoeda, escaparHtml, lerValorMonetario } = utilidades;
 
   const elementos = {};
   let idProdutoEmEdicao = null;
   let fotoAtual = '';
+  // Quantidades que o formulário mostrava ao abrir: o servidor usa para não gravar por cima de uma venda
+  let estoqueVistoAoAbrir = {};
   // Quem está logado: o papel ("dono" ou "funcionario") decide o que aparece no painel
   let usuarioLogado = null;
   let idFuncionarioEmEdicao = null;
@@ -42,6 +44,22 @@
     elementos.caixaTamanhoUnico.addEventListener('change', aplicarTamanhoUnico);
     elementos.campoCores = document.getElementById('produto-cores');
     elementos.campoAtivo = document.getElementById('produto-ativo');
+    elementos.campoControlaEstoque = document.getElementById('produto-controla-estoque');
+    elementos.blocoEstoque = document.getElementById('produto-bloco-estoque');
+    elementos.gradeEstoque = document.getElementById('produto-grade-estoque');
+    elementos.campoAlertaEstoque = document.getElementById('produto-alerta-estoque');
+    elementos.campoControlaEstoque.addEventListener('change', redesenharGradeDeEstoque);
+    elementos.campoCores.addEventListener('input', redesenharGradeDeEstoque);
+    document.getElementById('produto-tamanhos').addEventListener('change', redesenharGradeDeEstoque);
+    elementos.janelaAlertasEstoque = document.getElementById('janela-alertas-estoque');
+    componentes.configurarJanela(elementos.janelaAlertasEstoque);
+    document.getElementById('botao-alertas-estoque').addEventListener('click', abrirAlertasDeEstoque);
+    document.getElementById('lista-alertas-estoque').addEventListener('click', (evento) => {
+      const botaoEditar = evento.target.closest('button[data-id-produto]');
+      if (!botaoEditar) return;
+      elementos.janelaAlertasEstoque.close();
+      abrirFormulario(armazenamento.obterProdutoPorId(botaoEditar.dataset.idProduto));
+    });
 
     criarBotoesVerSenha();
     document.getElementById('formulario-login').addEventListener('submit', entrar);
@@ -259,6 +277,54 @@
     elementos.listaProdutos.querySelectorAll('img').forEach((elementoImagem, posicao) => {
       componentes.aplicarFotoComReserva(elementoImagem, produtos[posicao]);
     });
+    atualizarIconeDeEstoque();
+  }
+
+  /** Etiquetas e total de peças da linha do produto (só para quem controla estoque). */
+  function montarHtmlEstoqueDaLinha(produto) {
+    if (!produto.controlaEstoque) return '';
+    const { totalPecas, variacoesEsgotadas, variacoesEmAlerta } = estoque.resumirEstoque(produto);
+    const etiquetas = [
+      variacoesEsgotadas ? `<span class="etiqueta etiqueta-esgotado">${variacoesEsgotadas} esgotada${variacoesEsgotadas > 1 ? 's' : ''}</span>` : '',
+      variacoesEmAlerta ? `<span class="etiqueta etiqueta-estoque-baixo">Estoque baixo</span>` : '',
+    ].join('');
+    return `<p>Estoque: <strong>${totalPecas} ${totalPecas === 1 ? 'peça' : 'peças'}</strong> ${etiquetas}</p>`;
+  }
+
+  // ---------- Ícone e lista de estoque no mínimo ----------
+
+  function atualizarIconeDeEstoque() {
+    const quantidadeDeAlertas = estoque.listarAlertas(armazenamento.obterProdutos()).length;
+    const contador = document.getElementById('contador-alertas-estoque');
+    contador.textContent = quantidadeDeAlertas > 99 ? '99+' : String(quantidadeDeAlertas);
+    contador.classList.toggle('oculto', quantidadeDeAlertas === 0);
+    const botaoIcone = document.getElementById('botao-alertas-estoque');
+    botaoIcone.classList.toggle('com-alerta', quantidadeDeAlertas > 0);
+    botaoIcone.setAttribute(
+      'aria-label',
+      quantidadeDeAlertas ? `Estoque: ${quantidadeDeAlertas} ${quantidadeDeAlertas === 1 ? 'item' : 'itens'} no mínimo` : 'Estoque: nenhum item no mínimo',
+    );
+  }
+
+  function abrirAlertasDeEstoque() {
+    const alertas = estoque.listarAlertas(armazenamento.obterProdutos());
+    document.getElementById('lista-alertas-estoque').innerHTML = alertas.length
+      ? alertas
+          .map(
+            (alerta) => `
+        <div class="linha-alerta-estoque">
+          <div>
+            <strong>${escaparHtml(alerta.nome)}</strong>
+            <p>${escaparHtml(utilidades.rotularTamanho(alerta.tamanho))} · ${escaparHtml(alerta.cor)} ·
+              ${alerta.quantidade <= 0 ? '<span class="etiqueta etiqueta-esgotado">Esgotado</span>' : `<span class="etiqueta etiqueta-estoque-baixo">${alerta.quantidade} ${alerta.quantidade === 1 ? 'peça' : 'peças'}</span>`}
+            </p>
+          </div>
+          <button class="botao botao-contorno botao-pequeno" type="button" data-id-produto="${escaparHtml(alerta.idProduto)}">Editar</button>
+        </div>`,
+          )
+          .join('')
+      : '<p class="estado-vazio">Nenhum item no estoque mínimo. 👍</p>';
+    elementos.janelaAlertasEstoque.showModal();
   }
 
   function montarHtmlLinhaProduto(produto) {
@@ -270,6 +336,7 @@
           <h3>${escaparHtml(produto.nome)}${ativo ? '' : '<span class="etiqueta">Inativo</span>'}</h3>
           <p>${escaparHtml(produto.categoria)} · <strong>${formatarMoeda(produto.preco)}</strong></p>
           <p>${escaparHtml(produto.tamanhos.map(utilidades.rotularTamanho).join(', '))} · ${escaparHtml(produto.cores.join(', '))}</p>
+          ${montarHtmlEstoqueDaLinha(produto)}
           <div class="acoes-produto-admin">
             <button class="botao botao-contorno botao-pequeno" type="button" data-acao="editar">Editar</button>
             <button class="botao botao-contorno botao-pequeno" type="button" data-acao="alternar">${ativo ? 'Inativar' : 'Ativar'}</button>
@@ -290,7 +357,8 @@
       abrirFormulario(produto);
     } else if (botao.dataset.acao === 'alternar') {
       botao.disabled = true;
-      const salvou = await salvarComTratamento({ ...produto, ativo: produto.ativo === false });
+      // Sem "estoque" no envio, o servidor não mexe nas quantidades (que podem ter mudado com uma venda)
+      const salvou = await salvarComTratamento({ ...produto, ativo: produto.ativo === false, estoque: undefined });
       botao.disabled = false;
       if (salvou) {
         componentes.mostrarToast(produto.ativo === false ? 'Produto ativado' : 'Produto inativado');
@@ -336,6 +404,12 @@
     });
     aplicarTamanhoUnico();
 
+    elementos.campoControlaEstoque.checked = Boolean(produto && produto.controlaEstoque);
+    elementos.campoAlertaEstoque.value = String(produto ? produto.alertaEstoque ?? 3 : 3);
+    estoqueVistoAoAbrir = produto ? { ...(produto.estoque || {}) } : {};
+    elementos.gradeEstoque.innerHTML = '';
+    redesenharGradeDeEstoque();
+
     const fotoDoProduto = produto ? produto.foto : '';
     elementos.campoFotoUrl.value = fotoDoProduto.startsWith('data:') ? '' : fotoDoProduto;
     definirFoto(fotoDoProduto);
@@ -379,6 +453,45 @@
   }
 
   /** Lê o formulário e devolve { produto } ou { erro }. */
+  /** Quantidades digitadas agora na grade (ou, ao abrir, as do produto). */
+  function lerGradeDigitada() {
+    const quantidades = { ...estoqueVistoAoAbrir };
+    elementos.gradeEstoque.querySelectorAll('input[data-chave]').forEach((campo) => {
+      quantidades[campo.dataset.chave] = campo.value;
+    });
+    return quantidades;
+  }
+
+  /** Grade tamanho × cor do formulário; acompanha os tamanhos e as cores marcados, sem perder o que já foi digitado. */
+  function redesenharGradeDeEstoque() {
+    const controla = elementos.campoControlaEstoque.checked;
+    elementos.blocoEstoque.classList.toggle('oculto', !controla);
+    if (!controla) return;
+
+    const quantidadesDigitadas = lerGradeDigitada();
+    const tamanhos = [...elementos.caixasTamanhos].filter((caixa) => caixa.checked).map((caixa) => caixa.value);
+    const cores = [...new Set(elementos.campoCores.value.split(',').map((cor) => cor.trim()).filter(Boolean))];
+    if (tamanhos.length === 0 || cores.length === 0) {
+      elementos.gradeEstoque.innerHTML = '<p class="campo-ajuda">Escolha os tamanhos e as cores para preencher o estoque.</p>';
+      return;
+    }
+    const cabecalho = tamanhos.map((tamanho) => `<th scope="col">${escaparHtml(utilidades.rotularTamanho(tamanho))}</th>`).join('');
+    const linhas = cores
+      .map((cor) => {
+        const celulas = tamanhos
+          .map((tamanho) => {
+            const chave = estoque.chaveDaVariacao(tamanho, cor);
+            const valor = quantidadesDigitadas[chave] ?? 0;
+            return `<td><input type="number" min="0" step="1" inputmode="numeric" data-chave="${escaparHtml(chave)}"
+              value="${escaparHtml(String(valor))}" aria-label="${escaparHtml(`${cor}, ${utilidades.rotularTamanho(tamanho)}`)}" /></td>`;
+          })
+          .join('');
+        return `<tr><th scope="row">${escaparHtml(cor)}</th>${celulas}</tr>`;
+      })
+      .join('');
+    elementos.gradeEstoque.innerHTML = `<table><thead><tr><th></th>${cabecalho}</tr></thead><tbody>${linhas}</tbody></table>`;
+  }
+
   /** Tamanho único marcado: desmarca e trava P, M, G e GG (a peça só tem um tamanho). */
   function aplicarTamanhoUnico() {
     const ehTamanhoUnico = elementos.caixaTamanhoUnico.checked;
@@ -412,6 +525,20 @@
     if (tamanhos.length === 0) return { erro: 'Selecione pelo menos um tamanho.' };
     if (cores.length === 0) return { erro: 'Informe pelo menos uma cor.' };
 
+    const controlaEstoque = elementos.campoControlaEstoque.checked;
+    const alertaEstoque = Number(elementos.campoAlertaEstoque.value);
+    const quantidades = {};
+    if (controlaEstoque) {
+      if (!Number.isInteger(alertaEstoque) || alertaEstoque < 0) return { erro: 'Informe o aviso de estoque baixo como um número inteiro (ex.: 3).' };
+      for (const campo of elementos.gradeEstoque.querySelectorAll('input[data-chave]')) {
+        const quantidade = Number(campo.value);
+        if (campo.value === '' || !Number.isInteger(quantidade) || quantidade < 0) {
+          return { erro: 'Informe a quantidade de cada tamanho e cor (número inteiro, a partir de 0).' };
+        }
+        quantidades[campo.dataset.chave] = quantidade;
+      }
+    }
+
     return {
       produto: {
         // Produto novo vai sem id: o servidor cria o identificador
@@ -424,6 +551,9 @@
         tamanhos,
         cores,
         ativo: elementos.campoAtivo.checked,
+        controlaEstoque,
+        alertaEstoque: controlaEstoque ? alertaEstoque : Number(elementos.campoAlertaEstoque.value) || 3,
+        ...(controlaEstoque ? { estoque: quantidades, estoqueVisto: estoqueVistoAoAbrir } : {}),
       },
     };
   }

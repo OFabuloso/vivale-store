@@ -441,6 +441,21 @@ button {
 }
 
 /* Cores sobre a foto, com fundo escuro para aparecerem em qualquer imagem */
+/* Selo do produto que acabou em todas as variações */
+.selo-esgotado {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(11, 11, 12, 0.82);
+  color: var(--cor-destaque-realce);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
 .cartao-produto-cores {
   position: absolute;
   right: 8px;
@@ -870,6 +885,13 @@ button {
   border-radius: var(--raio);
   background: var(--cor-superficie);
   font-size: 14px;
+}
+
+/* Variação sem estoque: continua clicável (para a cliente ver), mas riscada */
+.opcao.esgotada {
+  color: var(--cor-texto-suave);
+  text-decoration: line-through;
+  opacity: 0.55;
 }
 
 .opcao[aria-pressed='true'] {
@@ -1928,6 +1950,106 @@ fieldset.campo legend {
 
 .linha-funcionario-admin.desativado > div:first-child {
   opacity: 0.55;
+}
+
+/* ---------- Estoque ---------- */
+
+/* Ícone do cabeçalho do painel: dourado quando há item no mínimo (o contador é o mesmo do carrinho) */
+.botao-icone-estoque {
+  color: var(--cor-texto-suave);
+  cursor: pointer;
+}
+
+.botao-icone-estoque.com-alerta {
+  border-color: var(--cor-destaque);
+  color: var(--cor-destaque-realce);
+}
+
+.etiqueta-esgotado {
+  background: var(--cor-alerta-fundo);
+  color: var(--cor-alerta-texto);
+}
+
+.etiqueta-estoque-baixo {
+  background: var(--cor-destaque);
+  color: var(--cor-sobre-destaque);
+}
+
+.secao-estoque .campo-ajuda {
+  margin: 8px 0;
+}
+
+/* Grade tamanho × cor: rola de lado no celular quando há muitos tamanhos */
+.grade-estoque {
+  overflow-x: auto;
+  margin-bottom: 12px;
+}
+
+.grade-estoque table {
+  border-collapse: collapse;
+  min-width: 100%;
+}
+
+.grade-estoque th {
+  padding: 4px 6px;
+  color: var(--cor-texto-suave);
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.grade-estoque th[scope='row'] {
+  text-align: left;
+}
+
+.grade-estoque td {
+  padding: 3px;
+}
+
+.grade-estoque input {
+  width: 100%;
+  min-width: 56px;
+  min-height: 40px;
+  padding: 0 6px;
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio);
+  background: var(--cor-campo);
+  font-size: 16px;
+  text-align: center;
+}
+
+.campo-alerta-estoque input {
+  width: 100%;
+  max-width: 120px;
+  min-height: 46px;
+  padding: 0 14px;
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio);
+  background: var(--cor-campo);
+  font-size: 16px;
+}
+
+.lista-alertas-estoque {
+  display: grid;
+  gap: 8px;
+}
+
+.linha-alerta-estoque {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio);
+  background: var(--cor-campo);
+}
+
+.linha-alerta-estoque p {
+  margin: 4px 0 0;
+  color: var(--cor-texto-suave);
+  font-size: 13px;
 }
 
 /* ---------- Verificação em duas etapas ---------- */

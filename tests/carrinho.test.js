@@ -125,3 +125,14 @@ test('sincroniza: sem mudanças devolve a mesma lista', () => {
   assert.equal(resultado.houveMudanca, false);
   assert.equal(resultado.itens, itens);
 });
+
+test('sincronizar tira do carrinho a variação que esgotou', () => {
+  const produto = { id: 'prd-1', nome: 'Vestido', preco: 50, tamanhos: ['P', 'M'], cores: ['Azul'], esgotados: ['M|Azul'] };
+  const itens = [
+    { chave: 'prd-1|P|Azul', idProduto: 'prd-1', nome: 'Vestido', preco: 50, tamanho: 'P', cor: 'Azul', quantidade: 2 },
+    { chave: 'prd-1|M|Azul', idProduto: 'prd-1', nome: 'Vestido', preco: 50, tamanho: 'M', cor: 'Azul', quantidade: 1 },
+  ];
+  const resultado = carrinho.sincronizarComCatalogo(itens, [produto]);
+  assert.equal(resultado.houveMudanca, true);
+  assert.deepEqual(resultado.itens.map((item) => item.tamanho), ['P']);
+});

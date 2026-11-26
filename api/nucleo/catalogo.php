@@ -19,7 +19,19 @@ function converterLinhaDeProduto(array $linha): array
         'tamanhos' => json_decode($linha['tamanhos'], true) ?: [],
         'cores' => json_decode($linha['cores'], true) ?: [],
         'ativo' => (bool) $linha['ativo'],
+        'controlaEstoque' => (bool) $linha['controla_estoque'],
+        'alertaEstoque' => (int) $linha['alerta_estoque'],
     ];
+}
+
+/** Produtos com a grade de estoque de cada um ("estoque": [chave => quantidade]). */
+function listarProdutosComEstoque(bool $somenteAtivos): array
+{
+    $estoquePorProduto = lerEstoqueDosProdutos();
+    return array_map(
+        fn (array $produto): array => $produto + ['estoque' => montarGradeDeEstoque($produto, $estoquePorProduto[$produto['id']] ?? [])],
+        listarProdutos($somenteAtivos),
+    );
 }
 
 function listarProdutos(bool $somenteAtivos): array
@@ -47,20 +59,22 @@ function salvarProdutoNoBanco(?string $idProduto, array $produto): array
         json_encode($produto['tamanhos'], JSON_UNESCAPED_UNICODE),
         json_encode($produto['cores'], JSON_UNESCAPED_UNICODE),
         $produto['ativo'] ? 1 : 0,
+        $produto['controlaEstoque'] ? 1 : 0,
+        $produto['alertaEstoque'],
     ];
 
     if ($idProduto !== null && buscarProduto($idProduto) !== null) {
         executarConsulta(
             'UPDATE produtos SET nome = ?, descricao = ?, categoria = ?, preco = ?, foto = ?,
-             tamanhos = ?, cores = ?, ativo = ? WHERE id = ?',
+             tamanhos = ?, cores = ?, ativo = ?, controla_estoque = ?, alerta_estoque = ? WHERE id = ?',
             [...$valores, $idProduto],
         );
     } else {
         $idProduto = $idProduto ?? gerarIdentificador('prd');
         $menorOrdem = (int) executarConsulta('SELECT COALESCE(MIN(ordem), 0) FROM produtos')->fetchColumn();
         executarConsulta(
-            'INSERT INTO produtos (nome, descricao, categoria, preco, foto, tamanhos, cores, ativo, id, ordem)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            'INSERT INTO produtos (nome, descricao, categoria, preco, foto, tamanhos, cores, ativo, controla_estoque, alerta_estoque, id, ordem)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
             [...$valores, $idProduto, $menorOrdem - 1],
         );
     }
@@ -111,11 +125,22 @@ function salvarValorMinimo(float $valorMinimo): void
     );
 }
 
+/**
+ * Produto como a cliente vê: sem quantidades nem o limite de aviso, só a lista de variações
+ * esgotadas ("M|Azul") dos produtos com controle de estoque.
+ */
+function montarProdutoPublico(array $produto): array
+{
+    $esgotados = $produto['controlaEstoque'] ? listarVariacoesEsgotadas($produto['estoque']) : [];
+    unset($produto['controlaEstoque'], $produto['alertaEstoque'], $produto['estoque']);
+    return $produto + ['esgotados' => $esgotados];
+}
+
 /** O que a cliente pode ver: produtos ativos, contatos ligados e o pedido mínimo. */
 function montarCatalogoPublico(): array
 {
     return [
-        'produtos' => listarProdutos(true),
+        'produtos' => array_map('montarProdutoPublico', listarProdutosComEstoque(true)),
         'configuracao' => [
             'contatosWhatsApp' => listarContatos(true),
             'valorMinimo' => obterValorMinimo(),

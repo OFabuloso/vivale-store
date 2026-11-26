@@ -4,7 +4,7 @@
 (function (raiz) {
   'use strict';
 
-  const { armazenamento, utilidades, componentes, telaCarrinho } = raiz.Loja;
+  const { armazenamento, utilidades, componentes, telaCarrinho, estoque } = raiz.Loja;
   const { formatarMoeda, escaparHtml, obterFundoDaCor, montarRotuloDoBotaoFiltrar } = utilidades;
 
   // Ordem de exibição dos tamanhos nos filtros
@@ -42,6 +42,7 @@
     elementos.corEscolhida = document.getElementById('detalhe-cor-escolhida');
     elementos.quantidade = document.getElementById('detalhe-quantidade');
     elementos.erro = document.getElementById('detalhe-erro');
+    elementos.botaoAdicionar = document.getElementById('botao-adicionar-carrinho');
 
     componentes.configurarJanela(elementos.janela);
 
@@ -229,6 +230,7 @@
         <span class="moldura-foto">
           <img class="cartao-produto-foto" data-id="${escaparHtml(produto.id)}" alt="${escaparHtml(produto.nome)}" loading="lazy" />
           <span class="cartao-produto-cores">${bolinhas}</span>
+          ${estoque.produtoEsgotado(produto) ? '<span class="selo-esgotado">Esgotado</span>' : ''}
         </span>
         <h3 class="cartao-produto-nome">${escaparHtml(produto.nome)}</h3>
         <span class="cartao-produto-preco">${formatarMoeda(produto.preco)} <small>/peça</small></span>
@@ -276,19 +278,24 @@
     elementos.detalheTamanhos.innerHTML = ordenarTamanhos(produto.tamanhos)
       .map(
         (opcao) =>
-          `<button type="button" class="opcao" data-valor="${escaparHtml(opcao)}" aria-pressed="${opcao === tamanho}">${escaparHtml(utilidades.rotularTamanho(opcao))}</button>`,
+          `<button type="button" class="opcao${estoque.opcaoEsgotada(produto, 'tamanho', opcao, cor) ? ' esgotada' : ''}" data-valor="${escaparHtml(opcao)}" aria-pressed="${opcao === tamanho}">${escaparHtml(utilidades.rotularTamanho(opcao))}</button>`,
       )
       .join('');
     elementos.detalheCores.innerHTML = produto.cores
       .map(
         (opcao) =>
-          `<button type="button" class="opcao opcao-cor" data-valor="${escaparHtml(opcao)}" aria-pressed="${opcao === cor}">` +
+          `<button type="button" class="opcao opcao-cor${estoque.opcaoEsgotada(produto, 'cor', opcao, tamanho) ? ' esgotada' : ''}" data-valor="${escaparHtml(opcao)}" aria-pressed="${opcao === cor}">` +
           `<span class="bolinha-cor" style="background:${obterFundoDaCor(opcao)}"></span>${escaparHtml(opcao)}</button>`,
       )
       .join('');
 
     elementos.tamanhoEscolhido.textContent = tamanho ? `· ${utilidades.rotularTamanho(tamanho)}` : '';
     elementos.corEscolhida.textContent = cor ? `· ${cor}` : '';
+
+    // Combinação escolhida sem estoque: o botão avisa e não deixa adicionar
+    const combinacaoEsgotada = Boolean(tamanho && cor) && estoque.variacaoEsgotada(produto, tamanho, cor);
+    elementos.botaoAdicionar.disabled = combinacaoEsgotada;
+    elementos.botaoAdicionar.textContent = combinacaoEsgotada ? 'Esgotado' : 'Adicionar';
   }
 
   function escolherOpcao(evento, tipoOpcao) {
@@ -315,6 +322,7 @@
       elementos.erro.classList.remove('oculto');
       return;
     }
+    if (estoque.variacaoEsgotada(produto, tamanho, cor)) return;
 
     const quantidade = lerQuantidade();
     telaCarrinho.adicionar(produto, tamanho, cor, quantidade);
