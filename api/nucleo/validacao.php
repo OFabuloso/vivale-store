@@ -5,7 +5,9 @@
  */
 declare(strict_types=1);
 
-const TAMANHOS_PERMITIDOS = ['P', 'M', 'G', 'GG'];
+// 'U' = tamanho único: não pode vir junto com os outros
+const TAMANHO_UNICO = 'U';
+const TAMANHOS_PERMITIDOS = ['P', 'M', 'G', 'GG', TAMANHO_UNICO];
 const LIMITE_CONTATOS = 20;
 
 function textoLimpo(mixed $valor, int $tamanhoMaximo): string
@@ -59,6 +61,9 @@ function validarProduto(array $dados): array
     }
     if ($tamanhos === []) {
         falhaDeValidacao('Selecione pelo menos um tamanho.');
+    }
+    if (in_array(TAMANHO_UNICO, $tamanhos, true) && count($tamanhos) > 1) {
+        falhaDeValidacao('Tamanho único não combina com P, M, G ou GG: escolha um ou outro.');
     }
     if ($cores === []) {
         falhaDeValidacao('Informe pelo menos uma cor.');

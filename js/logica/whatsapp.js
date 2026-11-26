@@ -21,7 +21,8 @@
   function formatarLinhaItem(item) {
     const quantidade = negrito(rotularQuantidade(item.quantidade, 'unidade', 'unidades'));
     const precoUnitario = negrito(utilidades.formatarMoeda(item.preco));
-    return `- ${italico(item.nome)} | Tamanho ${item.tamanho} | Cor ${item.cor} | ${quantidade} x ${precoUnitario}`;
+    const tamanho = item.tamanho === utilidades.TAMANHO_UNICO ? 'Tamanho único' : `Tamanho ${item.tamanho}`;
+    return `- ${italico(item.nome)} | ${tamanho} | Cor ${item.cor} | ${quantidade} x ${precoUnitario}`;
   }
 
   /** Monta o bloco de observações; devolve lista vazia quando a cliente não escreveu nada. */

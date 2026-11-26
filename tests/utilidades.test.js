@@ -7,6 +7,7 @@ const {
   montarSrcsetDaFoto,
   montarRotuloDoBotaoFiltrar,
   descreverSituacaoDoBackup,
+  rotularTamanho,
 } = require('../js/logica/utilidades.js');
 
 const COR_NEUTRA = '#cbbfb4';
@@ -107,4 +108,9 @@ test('backup baixado há poucos dias está em dia; depois de 7 dias volta o lemb
   const antigo = descreverSituacaoDoBackup({ ultimoBaixado: '2026-11-17T10:00:00-03:00' }, agora);
   assert.equal(antigo.emDia, false);
   assert.match(antigo.texto, /há 9 dias\. Baixe um agora/);
+});
+
+test('tamanho único aparece como "Único"; os outros ficam como estão', () => {
+  assert.equal(rotularTamanho('U'), 'Único');
+  assert.equal(rotularTamanho('GG'), 'GG');
 });

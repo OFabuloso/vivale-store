@@ -38,6 +38,8 @@
     elementos.previaFoto = document.getElementById('produto-foto-previa');
     elementos.botaoRemoverFoto = document.getElementById('botao-remover-foto');
     elementos.caixasTamanhos = document.querySelectorAll('#produto-tamanhos input[type="checkbox"]');
+    elementos.caixaTamanhoUnico = document.getElementById('produto-tamanho-unico');
+    elementos.caixaTamanhoUnico.addEventListener('change', aplicarTamanhoUnico);
     elementos.campoCores = document.getElementById('produto-cores');
     elementos.campoAtivo = document.getElementById('produto-ativo');
 
@@ -267,7 +269,7 @@
         <div>
           <h3>${escaparHtml(produto.nome)}${ativo ? '' : '<span class="etiqueta">Inativo</span>'}</h3>
           <p>${escaparHtml(produto.categoria)} · <strong>${formatarMoeda(produto.preco)}</strong></p>
-          <p>${escaparHtml(produto.tamanhos.join(', '))} · ${escaparHtml(produto.cores.join(', '))}</p>
+          <p>${escaparHtml(produto.tamanhos.map(utilidades.rotularTamanho).join(', '))} · ${escaparHtml(produto.cores.join(', '))}</p>
           <div class="acoes-produto-admin">
             <button class="botao botao-contorno botao-pequeno" type="button" data-acao="editar">Editar</button>
             <button class="botao botao-contorno botao-pequeno" type="button" data-acao="alternar">${ativo ? 'Inativar' : 'Ativar'}</button>
@@ -329,8 +331,10 @@
     elementos.campoCores.value = produto ? produto.cores.join(', ') : '';
     elementos.campoAtivo.checked = produto ? produto.ativo !== false : true;
     elementos.caixasTamanhos.forEach((caixa) => {
-      caixa.checked = produto ? produto.tamanhos.includes(caixa.value) : true;
+      // Produto novo começa com P, M, G e GG marcados
+      caixa.checked = produto ? produto.tamanhos.includes(caixa.value) : caixa !== elementos.caixaTamanhoUnico;
     });
+    aplicarTamanhoUnico();
 
     const fotoDoProduto = produto ? produto.foto : '';
     elementos.campoFotoUrl.value = fotoDoProduto.startsWith('data:') ? '' : fotoDoProduto;
@@ -375,6 +379,16 @@
   }
 
   /** Lê o formulário e devolve { produto } ou { erro }. */
+  /** Tamanho único marcado: desmarca e trava P, M, G e GG (a peça só tem um tamanho). */
+  function aplicarTamanhoUnico() {
+    const ehTamanhoUnico = elementos.caixaTamanhoUnico.checked;
+    elementos.caixasTamanhos.forEach((caixa) => {
+      if (caixa === elementos.caixaTamanhoUnico) return;
+      if (ehTamanhoUnico) caixa.checked = false;
+      caixa.disabled = ehTamanhoUnico;
+    });
+  }
+
   function lerFormularioProduto() {
     const nome = elementos.campoNome.value.trim();
     const descricao = elementos.campoDescricao.value.trim();

@@ -335,11 +335,28 @@ test('produto inválido é recusado com a mensagem certa', async () => {
     [{ nome: 'Vestido', categoria: 'Vestidos', preco: 10, tamanhos: ['P'], cores: ['Preto'], foto: 'javascript:alert(1)' }, /foto/],
     [{ nome: 'Vestido', categoria: 'Vestidos', preco: 10, tamanhos: ['P'], cores: ['Preto'], foto: 'data:image/png;base64,AAAA' }, /foto/],
     [{ id: "x' OR 1=1 --", nome: 'Vestido', categoria: 'Vestidos', preco: 10, tamanhos: ['P'], cores: ['Preto'] }, /Identificador/],
+    [{ nome: 'Vestido', categoria: 'Vestidos', preco: 10, tamanhos: ['U', 'M'], cores: ['Preto'] }, /Tamanho único não combina/],
   ];
   for (const [produto, mensagemEsperada] of casos) {
     const { status, dados } = await navegador.requisitar('api/admin/produtos.php', { metodo: 'POST', corpo: produto });
     assert.equal(status, 422, JSON.stringify(produto));
     assert.match(dados.erro, mensagemEsperada);
+  }
+});
+
+test('produto de tamanho único é salvo e aparece assim na loja', async () => {
+  const navegador = criarNavegador();
+  await navegador.entrar();
+  const criado = await navegador.requisitar('api/admin/produtos.php', {
+    metodo: 'POST',
+    corpo: { nome: 'Corset Tamanho Único', categoria: 'Corsets', preco: 80, tamanhos: ['U'], cores: ['Preto'] },
+  });
+  assert.equal(criado.status, 200, JSON.stringify(criado.dados));
+  try {
+    const naLoja = (await criarNavegador().requisitar('api/catalogo.php')).dados.produtos.find((produto) => produto.id === criado.dados.produto.id);
+    assert.deepEqual(naLoja.tamanhos, ['U']);
+  } finally {
+    await navegador.requisitar(`api/admin/produtos.php?id=${encodeURIComponent(criado.dados.produto.id)}`, { metodo: 'DELETE' });
   }
 });
 

@@ -88,3 +88,8 @@ test('recusa número inválido ou carrinho vazio', () => {
   assert.throws(() => gerarLinkWhatsApp('1234', itensDoExemplo), /WhatsApp/);
   assert.throws(() => gerarLinkWhatsApp('11999998888', []), /vazio/);
 });
+
+test('peça de tamanho único sai como "Tamanho único" na mensagem', () => {
+  const itens = [{ chave: 'prd-u|U|Preto', idProduto: 'prd-u', nome: 'Corset', preco: 80, tamanho: 'U', cor: 'Preto', quantidade: 2 }];
+  assert.match(gerarMensagemPedido(itens), /- _Corset_ \| Tamanho único \| Cor Preto \| \*2 unidades\*/);
+});

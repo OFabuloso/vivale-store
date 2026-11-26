@@ -176,7 +176,7 @@
         <div>
           <p class="item-carrinho-nome">${escaparHtml(item.nome)}</p>
           <p class="item-carrinho-variacao">
-            ${escaparHtml(item.tamanho)} · ${escaparHtml(item.cor)} · ${formatarMoeda(item.preco)}/peça
+            ${escaparHtml(utilidades.rotularTamanho(item.tamanho))} · ${escaparHtml(item.cor)} · ${formatarMoeda(item.preco)}/peça
           </p>
           <div class="item-carrinho-acoes">
             <div class="seletor-quantidade compacto">

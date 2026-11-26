@@ -1226,6 +1226,11 @@ fieldset.campo legend {
   accent-color: var(--cor-destaque);
 }
 
+/* Com "Tamanho único" marcado, P/M/G/GG ficam travados e apagados */
+.opcoes-checkbox label:has(input:disabled) {
+  opacity: 0.45;
+}
+
 .linha-campos {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);

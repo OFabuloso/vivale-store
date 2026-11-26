@@ -125,7 +125,7 @@
       categorias.map((categoria) => montarChip('categoria', categoria, categoria)).join('');
     elementos.filtroTamanho.innerHTML =
       montarChip('tamanho', null, 'Todos') +
-      tamanhos.map((tamanho) => montarChip('tamanho', tamanho, tamanho)).join('');
+      tamanhos.map((tamanho) => montarChip('tamanho', tamanho, utilidades.rotularTamanho(tamanho))).join('');
     elementos.filtroCor.innerHTML =
       montarChip('cor', null, 'Todas') +
       cores.map((cor) => montarChip('cor', cor, cor, true)).join('');
@@ -276,7 +276,7 @@
     elementos.detalheTamanhos.innerHTML = ordenarTamanhos(produto.tamanhos)
       .map(
         (opcao) =>
-          `<button type="button" class="opcao" data-valor="${escaparHtml(opcao)}" aria-pressed="${opcao === tamanho}">${escaparHtml(opcao)}</button>`,
+          `<button type="button" class="opcao" data-valor="${escaparHtml(opcao)}" aria-pressed="${opcao === tamanho}">${escaparHtml(utilidades.rotularTamanho(opcao))}</button>`,
       )
       .join('');
     elementos.detalheCores.innerHTML = produto.cores
@@ -287,7 +287,7 @@
       )
       .join('');
 
-    elementos.tamanhoEscolhido.textContent = tamanho ? `· ${tamanho}` : '';
+    elementos.tamanhoEscolhido.textContent = tamanho ? `· ${utilidades.rotularTamanho(tamanho)}` : '';
     elementos.corEscolhida.textContent = cor ? `· ${cor}` : '';
   }
 

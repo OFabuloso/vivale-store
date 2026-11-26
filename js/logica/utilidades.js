@@ -205,6 +205,14 @@
     return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
   }
 
+  // Peça de tamanho único: guardada como "U" e mostrada como "Único"
+  const TAMANHO_UNICO = 'U';
+
+  /** Nome do tamanho para mostrar na tela ("U" vira "Único"). */
+  function rotularTamanho(tamanho) {
+    return tamanho === TAMANHO_UNICO ? 'Único' : tamanho;
+  }
+
   // Depois disso o painel lembra o dono de baixar um backup novo
   const DIAS_PARA_LEMBRAR_BACKUP = 7;
   const MILISSEGUNDOS_POR_DIA = 24 * 60 * 60 * 1000;
@@ -249,6 +257,8 @@
     montarRotuloDoBotaoFiltrar,
     gerarImagemPlaceholder,
     descreverSituacaoDoBackup,
+    TAMANHO_UNICO,
+    rotularTamanho,
   };
 
   if (typeof module !== 'undefined' && module.exports) {
