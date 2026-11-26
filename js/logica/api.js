@@ -80,6 +80,24 @@
   }
 
   /**
+   * Registra o pedido da cliente antes de abrir o WhatsApp e devolve o número dele.
+   * Nunca lança: se o servidor falhar, devolve null e o WhatsApp abre sem número.
+   */
+  async function registrarPedidoDoSite(itens, observacoes, idContato) {
+    try {
+      const corpo = {
+        itens: itens.map((item) => ({ idProduto: item.idProduto, tamanho: item.tamanho, cor: item.cor, quantidade: item.quantidade })),
+        observacoes,
+        idContato,
+      };
+      return (await requisitar('api/pedidos.php', { metodo: 'POST', corpo, tempoLimiteMs: TEMPO_LIMITE_CATALOGO_MS })).numero;
+    } catch (erro) {
+      console.warn('Não foi possível registrar o pedido no servidor; o WhatsApp abre sem número.', erro);
+      return null;
+    }
+  }
+
+  /**
    * Atualiza o catálogo guardado no navegador com o do servidor.
    * Nunca lança: sem servidor, a loja segue com o que já tinha (ou com os dados iniciais).
    */
@@ -166,6 +184,26 @@
     return requisitar('api/admin/senha.php', { metodo: 'POST', corpo: { senhaAtual, novaSenha } });
   }
 
+  // ---------- Vendas ----------
+
+  /** Pedidos de uma situação (pendente, vendido ou cancelado) e quantos estão pendentes. */
+  function listarPedidos(situacao) {
+    return requisitar(`api/admin/pedidos.php?situacao=${encodeURIComponent(situacao)}`);
+  }
+
+  /** As ações devolvem { pedido, pendentes }, com o pedido completo para imprimir. */
+  function venderPedido(id, formaPagamento) {
+    return requisitar('api/admin/pedidos.php', { metodo: 'POST', corpo: { acao: 'vender', id, formaPagamento } });
+  }
+
+  function cancelarPedido(id) {
+    return requisitar('api/admin/pedidos.php', { metodo: 'POST', corpo: { acao: 'cancelar', id } });
+  }
+
+  function registrarVendaNoBalcao(itens, formaPagamento, observacoes) {
+    return requisitar('api/admin/pedidos.php', { metodo: 'POST', corpo: { acao: 'balcao', itens, formaPagamento, observacoes } });
+  }
+
   // ---------- Verificação em duas etapas (2FA) de quem está logado ----------
 
   function alterarDoisFatores(corpo) {
@@ -215,6 +253,7 @@
     requisitar,
     buscarCatalogoPublico,
     sincronizarCatalogo,
+    registrarPedidoDoSite,
     obterSessao,
     entrar,
     confirmarCodigoDoLogin,
@@ -231,6 +270,10 @@
     cadastrarFuncionario,
     alterarFuncionario,
     obterDoisFatores,
+    listarPedidos,
+    venderPedido,
+    cancelarPedido,
+    registrarVendaNoBalcao,
     iniciarDoisFatores,
     confirmarDoisFatores,
     desativarDoisFatores,

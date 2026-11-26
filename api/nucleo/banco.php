@@ -15,6 +15,8 @@ function conexaoComBanco(): PDO
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
             PDO::ATTR_EMULATE_PREPARES => false,
         ]);
+        // Datas gravadas (NOW(), criado_em...) no horário de Brasília, que não tem mais horário de verão
+        $conexao->exec("SET time_zone = '-03:00'");
     }
     return $conexao;
 }

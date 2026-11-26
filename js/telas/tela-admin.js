@@ -66,6 +66,7 @@
     document.getElementById('formulario-codigo').addEventListener('submit', confirmarCodigoDoLogin);
     document.getElementById('botao-voltar-login').addEventListener('click', () => mostrarLogin());
     configurarDoisFatores();
+    configurarVendas();
     document.getElementById('botao-sair').addEventListener('click', sair);
     document.querySelectorAll('.aba').forEach((aba) => aba.addEventListener('click', trocarAba));
 
@@ -227,6 +228,7 @@
     }
     document.getElementById('aviso-dois-fatores').classList.toggle('oculto', !ehDono() || usuarioLogado.doisFatores);
     carregarDoisFatores();
+    carregarPedidos('pendente');
   }
 
   function ehDono() {
@@ -764,6 +766,275 @@
       tratarErroDoServidor(erro, mostrarErro);
     } finally {
       botaoSalvar.disabled = false;
+    }
+  }
+
+  // ---------- Vendas (pedidos do site e balcão) ----------
+
+  let situacaoDasVendas = 'pendente';
+  let pedidosNaTela = new Map();
+  let itensDaVendaNoBalcao = [];
+  let idPedidoParaVender = null;
+
+  function configurarVendas() {
+    elementos.janelaNovaVenda = document.getElementById('janela-nova-venda');
+    elementos.janelaVenderPedido = document.getElementById('janela-vender-pedido');
+    componentes.configurarJanela(elementos.janelaNovaVenda);
+    componentes.configurarJanela(elementos.janelaVenderPedido);
+    document.getElementById('filtro-vendas').addEventListener('click', (evento) => {
+      const chip = evento.target.closest('[data-situacao]');
+      if (chip) carregarPedidos(chip.dataset.situacao);
+    });
+    document.getElementById('lista-pedidos').addEventListener('click', tratarAcaoPedido);
+    document.getElementById('botao-nova-venda').addEventListener('click', abrirNovaVenda);
+    document.getElementById('venda-produto').addEventListener('change', preencherVariacoesDaVenda);
+    document.getElementById('venda-tamanho').addEventListener('change', mostrarDisponivelNaVenda);
+    document.getElementById('venda-cor').addEventListener('change', mostrarDisponivelNaVenda);
+    document.getElementById('botao-adicionar-item-venda').addEventListener('click', adicionarItemNaVenda);
+    document.getElementById('itens-venda').addEventListener('click', (evento) => {
+      const botaoRemover = evento.target.closest('[data-remover-item]');
+      if (!botaoRemover) return;
+      itensDaVendaNoBalcao.splice(Number(botaoRemover.dataset.removerItem), 1);
+      renderizarItensDaVenda();
+    });
+    document.getElementById('formulario-nova-venda').addEventListener('submit', finalizarVendaNoBalcao);
+    document.getElementById('formulario-vender-pedido').addEventListener('submit', confirmarVendaDoPedido);
+  }
+
+  function formatarDataHora(dataDoBanco) {
+    return dataDoBanco ? new Date(dataDoBanco.replace(' ', 'T')).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '';
+  }
+
+  function mostrarPedidosPendentes(quantidade) {
+    const contador = document.getElementById('contador-pedidos-pendentes');
+    contador.textContent = String(quantidade);
+    contador.classList.toggle('oculto', !quantidade);
+  }
+
+  async function carregarPedidos(situacao = situacaoDasVendas) {
+    situacaoDasVendas = situacao;
+    document.querySelectorAll('#filtro-vendas [data-situacao]').forEach((chip) => {
+      chip.setAttribute('aria-pressed', String(chip.dataset.situacao === situacao));
+    });
+    try {
+      const { pedidos, pendentes } = await api.listarPedidos(situacao);
+      mostrarPedidosPendentes(pendentes);
+      pedidosNaTela = new Map(pedidos.map((pedido) => [pedido.id, pedido]));
+      document.getElementById('lista-pedidos').innerHTML = pedidos.length
+        ? pedidos.map(montarHtmlPedido).join('')
+        : `<p class="estado-vazio">${{ pendente: 'Nenhum pedido do site esperando.', vendido: 'Nenhuma venda ainda.', cancelado: 'Nenhum pedido cancelado.' }[situacao]}</p>`;
+    } catch (erro) {
+      tratarErroDoServidor(erro, (mensagem) => {
+        document.getElementById('lista-pedidos').innerHTML = `<p class="mensagem-erro">${escaparHtml(mensagem)}</p>`;
+      });
+    }
+  }
+
+  function montarHtmlPedido(pedido) {
+    const origem = pedido.origem === 'site' ? `Site${pedido.atendente ? ` · ${escaparHtml(pedido.atendente)}` : ''}` : 'Balcão';
+    const itens = pedido.itens
+      .map(
+        (item) =>
+          `<li>${item.quantidade}× ${escaparHtml(item.nome)} <span>${escaparHtml(utilidades.rotularTamanho(item.tamanho))} · ${escaparHtml(item.cor)}</span>` +
+          ` <strong>${formatarMoeda(item.quantidade * item.preco)}</strong></li>`,
+      )
+      .join('');
+    const detalhesDaVenda = [
+      pedido.formaPagamento ? utilidades.rotularFormaDePagamento(pedido.formaPagamento) : '',
+      pedido.situacao !== 'pendente' && pedido.finalizadoPor ? `${pedido.situacao === 'vendido' ? 'vendido' : 'cancelado'} por ${escaparHtml(pedido.finalizadoPor)}` : '',
+      pedido.finalizadoEm ? formatarDataHora(pedido.finalizadoEm) : '',
+    ].filter(Boolean).join(' · ');
+    const acoes = {
+      pendente: `<button class="botao botao-primario botao-pequeno" type="button" data-acao-pedido="vender">Marcar como vendido</button>
+        <button class="botao botao-contorno botao-pequeno" type="button" data-acao-pedido="cancelar">Cancelar</button>`,
+      vendido: `${ehDono() ? '<button class="botao botao-perigo botao-pequeno" type="button" data-acao-pedido="cancelar">Cancelar venda</button>' : ''}`,
+      cancelado: '',
+    }[pedido.situacao];
+    return `
+      <article class="cartao-pedido" data-id-pedido="${pedido.id}">
+        <div class="cartao-pedido-topo">
+          <strong>Pedido nº ${pedido.id}</strong>
+          <span class="etiqueta">${origem}</span>
+          <span class="cartao-pedido-data">${escaparHtml(formatarDataHora(pedido.criadoEm))}</span>
+        </div>
+        <ul class="itens-pedido">${itens}</ul>
+        ${pedido.observacoes ? `<p class="cartao-pedido-observacoes">Obs.: ${escaparHtml(pedido.observacoes)}</p>` : ''}
+        <p class="cartao-pedido-total">Total: <strong>${formatarMoeda(pedido.total)}</strong>${detalhesDaVenda ? ` · ${detalhesDaVenda}` : ''}</p>
+        <div class="grupo-botoes">${acoes}</div>
+      </article>`;
+  }
+
+  async function tratarAcaoPedido(evento) {
+    const botao = evento.target.closest('[data-acao-pedido]');
+    if (!botao) return;
+    const pedido = pedidosNaTela.get(Number(botao.closest('[data-id-pedido]').dataset.idPedido));
+    if (!pedido) return;
+
+    if (botao.dataset.acaoPedido === 'vender') {
+      idPedidoParaVender = pedido.id;
+      document.getElementById('formulario-vender-pedido').reset();
+      mostrarErroEm('erro-vender-pedido', '');
+      document.getElementById('resumo-vender-pedido').textContent =
+        `Pedido nº ${pedido.id} · ${pedido.itens.reduce((soma, item) => soma + item.quantidade, 0)} peças · ${formatarMoeda(pedido.total)}`;
+      elementos.janelaVenderPedido.showModal();
+    } else if (botao.dataset.acaoPedido === 'cancelar') {
+      const mensagem = pedido.situacao === 'vendido'
+        ? `Cancelar a venda nº ${pedido.id}? As peças voltam para o estoque.`
+        : `Cancelar o pedido nº ${pedido.id}?`;
+      if (!confirm(mensagem)) return;
+      botao.disabled = true;
+      try {
+        await api.cancelarPedido(pedido.id);
+        componentes.mostrarToast(`Pedido nº ${pedido.id} cancelado`);
+        await Promise.all([carregarPedidos(), recarregarProdutos()]);
+      } catch (erro) {
+        botao.disabled = false;
+        tratarErroDoServidor(erro, (mensagemDeErro) => alert(mensagemDeErro));
+      }
+    }
+  }
+
+  function lerFormaDePagamento(nomeDoGrupo) {
+    const escolhida = document.querySelector(`input[name="${nomeDoGrupo}"]:checked`);
+    return escolhida ? escolhida.value : '';
+  }
+
+  async function confirmarVendaDoPedido(evento) {
+    evento.preventDefault();
+    const formaPagamento = lerFormaDePagamento('forma-pagamento-pedido');
+    if (!formaPagamento) return mostrarErroEm('erro-vender-pedido', 'Escolha a forma de pagamento.');
+    const botaoConfirmar = evento.target.querySelector('button[type="submit"]');
+    botaoConfirmar.disabled = true;
+    try {
+      const { pedido } = await api.venderPedido(idPedidoParaVender, formaPagamento);
+      elementos.janelaVenderPedido.close();
+      await Promise.all([carregarPedidos(), recarregarProdutos()]);
+      aoConcluirVenda(pedido);
+    } catch (erro) {
+      tratarErroDoServidor(erro, (mensagem) => mostrarErroEm('erro-vender-pedido', mensagem));
+    } finally {
+      botaoConfirmar.disabled = false;
+    }
+  }
+
+  /** Depois de uma venda: estoque e alertas do painel com os números novos. */
+  async function recarregarProdutos() {
+    try {
+      armazenamento.aplicarCatalogoDoServidor(await api.carregarPainel());
+      renderizarProdutos();
+    } catch (erro) {
+      tratarErroDoServidor(erro, () => {});
+    }
+  }
+
+  function aoConcluirVenda(pedido) {
+    componentes.mostrarToast(`Venda nº ${pedido.id} concluída`);
+  }
+
+  // Nova venda no balcão
+
+  function abrirNovaVenda() {
+    itensDaVendaNoBalcao = [];
+    document.getElementById('formulario-nova-venda').reset();
+    mostrarErroEm('erro-nova-venda', '');
+    const produtos = [...armazenamento.obterProdutos()].sort((primeiro, segundo) => primeiro.nome.localeCompare(segundo.nome, 'pt-BR'));
+    document.getElementById('venda-produto').innerHTML =
+      '<option value="">Escolha o produto</option>' +
+      produtos
+        .map((produto) => `<option value="${escaparHtml(produto.id)}">${escaparHtml(produto.nome)}${produto.ativo === false ? ' (inativo)' : ''}</option>`)
+        .join('');
+    preencherVariacoesDaVenda();
+    renderizarItensDaVenda();
+    elementos.janelaNovaVenda.showModal();
+  }
+
+  function produtoEscolhidoNaVenda() {
+    return armazenamento.obterProdutoPorId(document.getElementById('venda-produto').value);
+  }
+
+  function preencherVariacoesDaVenda() {
+    const produto = produtoEscolhidoNaVenda();
+    const montarOpcoes = (valores, rotular) =>
+      valores.map((valor) => `<option value="${escaparHtml(valor)}">${escaparHtml(rotular(valor))}</option>`).join('');
+    document.getElementById('venda-tamanho').innerHTML = produto ? montarOpcoes(produto.tamanhos, utilidades.rotularTamanho) : '';
+    document.getElementById('venda-cor').innerHTML = produto ? montarOpcoes(produto.cores, (cor) => cor) : '';
+    mostrarDisponivelNaVenda();
+  }
+
+  /** Quantas peças ainda podem ir nesta venda (estoque menos o que já está na lista). */
+  function calcularDisponivelNaVenda(produto, tamanho, cor) {
+    if (!produto || !produto.controlaEstoque) return null;
+    const jaNaVenda = itensDaVendaNoBalcao
+      .filter((item) => item.idProduto === produto.id && item.tamanho === tamanho && item.cor === cor)
+      .reduce((soma, item) => soma + item.quantidade, 0);
+    return (estoque.montarGrade(produto)[estoque.chaveDaVariacao(tamanho, cor)] || 0) - jaNaVenda;
+  }
+
+  function mostrarDisponivelNaVenda() {
+    const produto = produtoEscolhidoNaVenda();
+    const disponivel = calcularDisponivelNaVenda(produto, document.getElementById('venda-tamanho').value, document.getElementById('venda-cor').value);
+    document.getElementById('venda-disponivel').textContent = !produto
+      ? ''
+      : disponivel === null
+        ? 'Produto sem controle de estoque'
+        : `Em estoque: ${Math.max(0, disponivel)} ${disponivel === 1 ? 'peça' : 'peças'}`;
+  }
+
+  function adicionarItemNaVenda() {
+    const produto = produtoEscolhidoNaVenda();
+    const tamanho = document.getElementById('venda-tamanho').value;
+    const cor = document.getElementById('venda-cor').value;
+    const quantidade = Math.floor(Number(document.getElementById('venda-quantidade').value));
+    if (!produto) return mostrarErroEm('erro-nova-venda', 'Escolha o produto.');
+    if (!Number.isInteger(quantidade) || quantidade < 1) return mostrarErroEm('erro-nova-venda', 'Informe a quantidade.');
+    const disponivel = calcularDisponivelNaVenda(produto, tamanho, cor);
+    if (disponivel !== null && quantidade > disponivel) {
+      return mostrarErroEm('erro-nova-venda', `Só há ${Math.max(0, disponivel)} em estoque desse tamanho e cor.`);
+    }
+    mostrarErroEm('erro-nova-venda', '');
+    const itemExistente = itensDaVendaNoBalcao.find((item) => item.idProduto === produto.id && item.tamanho === tamanho && item.cor === cor);
+    if (itemExistente) {
+      itemExistente.quantidade += quantidade;
+    } else {
+      itensDaVendaNoBalcao.push({ idProduto: produto.id, nome: produto.nome, tamanho, cor, quantidade, preco: Number(produto.preco) });
+    }
+    document.getElementById('venda-quantidade').value = '1';
+    renderizarItensDaVenda();
+  }
+
+  function renderizarItensDaVenda() {
+    document.getElementById('itens-venda').innerHTML = itensDaVendaNoBalcao.length
+      ? `<ul class="itens-pedido">${itensDaVendaNoBalcao
+          .map(
+            (item, posicao) =>
+              `<li>${item.quantidade}× ${escaparHtml(item.nome)} <span>${escaparHtml(utilidades.rotularTamanho(item.tamanho))} · ${escaparHtml(item.cor)}</span>` +
+              ` <strong>${formatarMoeda(item.quantidade * item.preco)}</strong>` +
+              ` <button class="botao-texto" type="button" data-remover-item="${posicao}">Remover</button></li>`,
+          )
+          .join('')}</ul>`
+      : '<p class="campo-ajuda">Nenhum item ainda.</p>';
+    const total = itensDaVendaNoBalcao.reduce((soma, item) => soma + item.quantidade * item.preco, 0);
+    document.getElementById('venda-total').textContent = formatarMoeda(total);
+    mostrarDisponivelNaVenda();
+  }
+
+  async function finalizarVendaNoBalcao(evento) {
+    evento.preventDefault();
+    const formaPagamento = lerFormaDePagamento('forma-pagamento-venda');
+    if (itensDaVendaNoBalcao.length === 0) return mostrarErroEm('erro-nova-venda', 'Adicione pelo menos um item.');
+    if (!formaPagamento) return mostrarErroEm('erro-nova-venda', 'Escolha a forma de pagamento.');
+    const botaoFinalizar = evento.target.querySelector('button[type="submit"]');
+    botaoFinalizar.disabled = true;
+    try {
+      const itens = itensDaVendaNoBalcao.map(({ idProduto, tamanho, cor, quantidade }) => ({ idProduto, tamanho, cor, quantidade }));
+      const { pedido } = await api.registrarVendaNoBalcao(itens, formaPagamento, document.getElementById('venda-observacoes').value.trim());
+      elementos.janelaNovaVenda.close();
+      await Promise.all([situacaoDasVendas === 'vendido' ? carregarPedidos() : Promise.resolve(), recarregarProdutos()]);
+      aoConcluirVenda(pedido);
+    } catch (erro) {
+      tratarErroDoServidor(erro, (mensagem) => mostrarErroEm('erro-nova-venda', mensagem));
+    } finally {
+      botaoFinalizar.disabled = false;
     }
   }
 

@@ -153,3 +153,23 @@ test('as ações do 2FA vão para o endpoint certo com a ação certa', async ()
     { acao: 'novosCodigos', codigo: '111222' },
   ]);
 });
+
+test('registra o pedido do site só com o necessário; se o servidor falhar, devolve null sem travar', async () => {
+  proximasRespostas = [{ status: 201, dados: { numero: 42 } }];
+  const itens = [{ chave: 'prd-1|M|Azul', idProduto: 'prd-1', nome: 'Vestido', preco: 65, tamanho: 'M', cor: 'Azul', quantidade: 2 }];
+  assert.equal(await api.registrarPedidoDoSite(itens, 'obs', 'contato-1'), 42);
+  assert.deepEqual(JSON.parse(requisicoesFeitas[0].body), {
+    itens: [{ idProduto: 'prd-1', tamanho: 'M', cor: 'Azul', quantidade: 2 }],
+    observacoes: 'obs',
+    idContato: 'contato-1',
+  });
+
+  const avisoOriginal = console.warn;
+  console.warn = () => {};
+  try {
+    proximasRespostas = [{ status: 500, dados: { erro: 'falhou' } }];
+    assert.equal(await api.registrarPedidoDoSite(itens, '', 'contato-1'), null);
+  } finally {
+    console.warn = avisoOriginal;
+  }
+});

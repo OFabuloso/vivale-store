@@ -32,14 +32,18 @@
     return ['', 'Observações:', textoObservacoes];
   }
 
-  /** Gera o texto completo do pedido: saudação, motivo, itens, resumo, observações e encerramento. */
-  function gerarMensagemPedido(itens, observacoes = '') {
+  /**
+   * Gera o texto completo do pedido: saudação, motivo, número do pedido (quando o site conseguiu
+   * registrar), itens, resumo, observações e encerramento.
+   */
+  function gerarMensagemPedido(itens, observacoes = '', numeroPedido = null) {
     const totalPecas = carrinho.contarPecas(itens);
     const valorTotal = carrinho.calcularTotal(itens);
 
     return [
       'Olá, equipe Vivale Store.',
       'Gostaria de finalizar o pedido no atacado que montei no site.',
+      ...(numeroPedido ? [`Número do pedido: ${negrito(numeroPedido)}`] : []),
       '',
       'Itens do pedido:',
       ...itens.map(formatarLinhaItem),
@@ -58,7 +62,7 @@
    * e devolve a URL final do WhatsApp.
    * Lança erro se o número for inválido ou o carrinho estiver vazio.
    */
-  function gerarLinkWhatsApp(numeroWhatsApp, itens, observacoes = '') {
+  function gerarLinkWhatsApp(numeroWhatsApp, itens, observacoes = '', numeroPedido = null) {
     const numeroLimpo = utilidades.normalizarTelefone(numeroWhatsApp);
     if (numeroLimpo.length < 12) {
       throw new Error('Número de WhatsApp da loja não configurado corretamente.');
@@ -67,7 +71,7 @@
       throw new Error('O carrinho está vazio.');
     }
 
-    const mensagemCodificada = encodeURIComponent(gerarMensagemPedido(itens, observacoes));
+    const mensagemCodificada = encodeURIComponent(gerarMensagemPedido(itens, observacoes, numeroPedido));
     return `https://wa.me/${numeroLimpo}?text=${mensagemCodificada}`;
   }
 

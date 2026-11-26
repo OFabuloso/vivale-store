@@ -93,3 +93,10 @@ test('peça de tamanho único sai como "Tamanho único" na mensagem', () => {
   const itens = [{ chave: 'prd-u|U|Preto', idProduto: 'prd-u', nome: 'Corset', preco: 80, tamanho: 'U', cor: 'Preto', quantidade: 2 }];
   assert.match(gerarMensagemPedido(itens), /- _Corset_ \| Tamanho único \| Cor Preto \| \*2 unidades\*/);
 });
+
+test('com o número registrado no site, a mensagem traz "Número do pedido"', () => {
+  const itens = [{ chave: 'prd-1|M|Azul', idProduto: 'prd-1', nome: 'Vestido', preco: 65, tamanho: 'M', cor: 'Azul', quantidade: 1 }];
+  const linhas = gerarMensagemPedido(itens, '', 42).split('\n');
+  assert.equal(linhas[2], 'Número do pedido: *42*');
+  assert.ok(!gerarMensagemPedido(itens).includes('Número do pedido'));
+});

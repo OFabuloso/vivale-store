@@ -1120,6 +1120,7 @@ button {
 }
 
 .campo input[type='text'],
+.campo input[type='number'],
 .campo input[type='password'],
 .campo input[type='tel'],
 .campo input[type='url'],
@@ -2020,14 +2021,7 @@ fieldset.campo legend {
 }
 
 .campo-alerta-estoque input {
-  width: 100%;
   max-width: 120px;
-  min-height: 46px;
-  padding: 0 14px;
-  border: 1px solid var(--cor-borda);
-  border-radius: var(--raio);
-  background: var(--cor-campo);
-  font-size: 16px;
 }
 
 .lista-alertas-estoque {
@@ -2044,6 +2038,88 @@ fieldset.campo legend {
   border: 1px solid var(--cor-borda);
   border-radius: var(--raio);
   background: var(--cor-campo);
+}
+
+/* ---------- Vendas ---------- */
+
+.filtros-vendas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.lista-pedidos {
+  display: grid;
+  gap: 12px;
+}
+
+.cartao-pedido {
+  padding: 14px;
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-painel);
+  background: var(--cor-superficie);
+}
+
+.cartao-pedido-topo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.cartao-pedido-data {
+  margin-left: auto;
+  color: var(--cor-texto-suave);
+  font-size: 13px;
+}
+
+.itens-pedido {
+  display: grid;
+  gap: 6px;
+  margin: 10px 0;
+  padding: 0;
+  list-style: none;
+  font-size: 14px;
+}
+
+.itens-pedido li span {
+  color: var(--cor-texto-suave);
+  font-size: 13px;
+}
+
+.itens-pedido li strong {
+  float: right;
+  margin-left: 8px;
+}
+
+.itens-pedido .botao-texto {
+  margin-left: 6px;
+  font-size: 13px;
+}
+
+.cartao-pedido-observacoes,
+.cartao-pedido-total {
+  margin: 0 0 10px;
+  font-size: 14px;
+}
+
+.cartao-pedido-observacoes {
+  color: var(--cor-texto-suave);
+}
+
+.linha-quantidade-venda {
+  align-items: end;
+}
+
+.itens-venda {
+  margin: 12px 0;
+}
+
+.total-venda {
+  margin: 0 0 10px;
+  font-size: 16px;
+  text-align: right;
 }
 
 .linha-alerta-estoque p {

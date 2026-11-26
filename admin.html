@@ -15,7 +15,7 @@
     <link rel="icon" href="img/marca/favicon.ico" sizes="any" />
     <link rel="icon" type="image/png" href="img/marca/favicon-32.png" sizes="32x32" />
     <link rel="apple-touch-icon" href="img/marca/apple-touch-icon.png" />
-    <link rel="stylesheet" href="css/estilos.css?v=8" />
+    <link rel="stylesheet" href="css/estilos.css?v=10" />
   </head>
   <body>
     <!-- Login (usuário e senha conferidos no servidor) -->
@@ -79,6 +79,9 @@
         </div>
         <div class="abas" role="tablist">
           <button class="aba" type="button" role="tab" aria-selected="true" data-aba="aba-produtos">Produtos</button>
+          <button class="aba" type="button" role="tab" aria-selected="false" data-aba="aba-vendas">
+            Vendas <span class="etiqueta etiqueta-estoque-baixo oculto" id="contador-pedidos-pendentes"></span>
+          </button>
           <button class="aba" type="button" role="tab" aria-selected="false" data-aba="aba-configuracoes">Configurações</button>
           <button class="aba oculto" type="button" role="tab" aria-selected="false" data-aba="aba-equipe" data-somente-dono>Equipe</button>
         </div>
@@ -93,6 +96,20 @@
         </section>
 
         <!-- Aba: Configurações -->
+        <!-- Aba: Vendas (pedidos do site e vendas no balcão) -->
+        <section class="oculto" id="aba-vendas" role="tabpanel">
+          <div class="topo-secao">
+            <h2>Vendas</h2>
+            <button class="botao botao-primario botao-pequeno" id="botao-nova-venda" type="button">+ Nova venda (balcão)</button>
+          </div>
+          <div class="filtros-vendas" id="filtro-vendas">
+            <button class="chip" type="button" data-situacao="pendente" aria-pressed="true">Pedidos do site</button>
+            <button class="chip" type="button" data-situacao="vendido" aria-pressed="false">Vendidos</button>
+            <button class="chip" type="button" data-situacao="cancelado" aria-pressed="false">Cancelados</button>
+          </div>
+          <div class="lista-pedidos" id="lista-pedidos"></div>
+        </section>
+
         <section class="oculto" id="aba-configuracoes" role="tabpanel">
           <form class="cartao secao-config oculto" id="formulario-contatos" novalidate data-somente-dono>
             <h2>Contatos do WhatsApp</h2>
@@ -356,6 +373,88 @@
       </form>
     </dialog>
 
+    <!-- Nova venda no balcão (loja física) -->
+    <dialog class="janela" id="janela-nova-venda" aria-labelledby="titulo-nova-venda">
+      <form class="formulario-janela" id="formulario-nova-venda" novalidate>
+        <div class="janela-cabecalho">
+          <h2 id="titulo-nova-venda">Nova venda (balcão)</h2>
+          <button class="botao-fechar" type="button" data-fechar aria-label="Fechar">×</button>
+        </div>
+        <div class="janela-corpo">
+          <div class="campo">
+            <label for="venda-produto">Produto</label>
+            <select id="venda-produto"></select>
+          </div>
+          <div class="linha-campos">
+            <div class="campo">
+              <label for="venda-tamanho">Tamanho</label>
+              <select id="venda-tamanho"></select>
+            </div>
+            <div class="campo">
+              <label for="venda-cor">Cor</label>
+              <select id="venda-cor"></select>
+            </div>
+          </div>
+          <div class="linha-campos linha-quantidade-venda">
+            <div class="campo">
+              <label for="venda-quantidade">Quantidade</label>
+              <input type="number" id="venda-quantidade" min="1" step="1" value="1" inputmode="numeric" />
+            </div>
+            <p class="campo-ajuda" id="venda-disponivel"></p>
+          </div>
+          <button class="botao botao-contorno botao-largo" id="botao-adicionar-item-venda" type="button">Adicionar item</button>
+
+          <div class="itens-venda" id="itens-venda"></div>
+
+          <fieldset class="campo">
+            <legend>Forma de pagamento</legend>
+            <div class="opcoes-checkbox" id="venda-forma-pagamento">
+              <label><input type="radio" name="forma-pagamento-venda" value="pix" /> Pix</label>
+              <label><input type="radio" name="forma-pagamento-venda" value="dinheiro" /> Dinheiro</label>
+              <label><input type="radio" name="forma-pagamento-venda" value="credito" /> Cartão de crédito</label>
+              <label><input type="radio" name="forma-pagamento-venda" value="debito" /> Cartão de débito</label>
+            </div>
+          </fieldset>
+          <div class="campo">
+            <label for="venda-observacoes">Observação (opcional)</label>
+            <input type="text" id="venda-observacoes" maxlength="200" />
+          </div>
+          <p class="mensagem-erro oculto" id="erro-nova-venda"></p>
+        </div>
+        <div class="janela-rodape">
+          <p class="total-venda">Total: <strong id="venda-total">R$ 0,00</strong></p>
+          <button class="botao botao-primario botao-largo" type="submit">Finalizar venda</button>
+        </div>
+      </form>
+    </dialog>
+
+    <!-- Pedido do site que virou venda: escolhe a forma de pagamento -->
+    <dialog class="janela" id="janela-vender-pedido" aria-labelledby="titulo-vender-pedido">
+      <form class="formulario-janela" id="formulario-vender-pedido" novalidate>
+        <div class="janela-cabecalho">
+          <h2 id="titulo-vender-pedido">Marcar como vendido</h2>
+          <button class="botao-fechar" type="button" data-fechar aria-label="Fechar">×</button>
+        </div>
+        <div class="janela-corpo">
+          <p id="resumo-vender-pedido"></p>
+          <fieldset class="campo">
+            <legend>Forma de pagamento</legend>
+            <div class="opcoes-checkbox">
+              <label><input type="radio" name="forma-pagamento-pedido" value="pix" /> Pix</label>
+              <label><input type="radio" name="forma-pagamento-pedido" value="dinheiro" /> Dinheiro</label>
+              <label><input type="radio" name="forma-pagamento-pedido" value="credito" /> Cartão de crédito</label>
+              <label><input type="radio" name="forma-pagamento-pedido" value="debito" /> Cartão de débito</label>
+            </div>
+          </fieldset>
+          <p class="campo-ajuda">As peças saem do estoque agora.</p>
+          <p class="mensagem-erro oculto" id="erro-vender-pedido"></p>
+        </div>
+        <div class="janela-rodape">
+          <button class="botao botao-primario botao-largo" type="submit">Confirmar venda</button>
+        </div>
+      </form>
+    </dialog>
+
     <!-- Itens no estoque mínimo (ícone do cabeçalho) -->
     <dialog class="janela" id="janela-alertas-estoque" aria-labelledby="titulo-alertas-estoque">
       <div class="formulario-janela">
@@ -390,16 +489,16 @@
     </dialog>
 
     <!-- Ordem importa: dados → lógica → telas → página -->
-    <script src="js/dados/dados-iniciais.js?v=8"></script>
-    <script src="js/logica/utilidades.js?v=8"></script>
-    <script src="js/logica/estoque.js?v=8"></script>
-    <script src="js/logica/contatos.js?v=8"></script>
-    <script src="js/logica/armazenamento.js?v=8"></script>
-    <script src="js/logica/api.js?v=8"></script>
-    <script src="js/logica/imagem.js?v=8"></script>
-    <script src="js/telas/componentes.js?v=8"></script>
-    <script src="js/vendor/qrcode-generator.js?v=8"></script>
-    <script src="js/telas/tela-admin.js?v=8"></script>
-    <script src="js/paginas/pagina-admin.js?v=8"></script>
+    <script src="js/dados/dados-iniciais.js?v=10"></script>
+    <script src="js/logica/utilidades.js?v=10"></script>
+    <script src="js/logica/estoque.js?v=10"></script>
+    <script src="js/logica/contatos.js?v=10"></script>
+    <script src="js/logica/armazenamento.js?v=10"></script>
+    <script src="js/logica/api.js?v=10"></script>
+    <script src="js/logica/imagem.js?v=10"></script>
+    <script src="js/telas/componentes.js?v=10"></script>
+    <script src="js/vendor/qrcode-generator.js?v=10"></script>
+    <script src="js/telas/tela-admin.js?v=10"></script>
+    <script src="js/paginas/pagina-admin.js?v=10"></script>
   </body>
 </html>

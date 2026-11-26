@@ -131,15 +131,14 @@
     }
 
     try {
-      const linkWhatsApp = whatsapp.gerarLinkWhatsApp(
-        contatoEscolhido.numero,
-        itens,
-        armazenamento.obterObservacoes(),
-      );
+      const observacoes = armazenamento.obterObservacoes();
+      mostrarAviso(`Abrindo o WhatsApp de ${contatoEscolhido.nome}...`);
+      // O pedido fica registrado no painel (pendente) e o número vai na mensagem
+      const numeroPedido = await api.registrarPedidoDoSite(itens, observacoes, contatoEscolhido.id);
+      const linkWhatsApp = whatsapp.gerarLinkWhatsApp(contatoEscolhido.numero, itens, observacoes, numeroPedido);
       // Itens e observações já vão na mensagem; o próximo pedido começa do zero
       armazenamento.salvarCarrinho([]);
       armazenamento.salvarObservacoes('');
-      mostrarAviso(`Abrindo o WhatsApp de ${contatoEscolhido.nome}...`);
       raiz.location.assign(linkWhatsApp);
     } catch (erro) {
       componentes.mostrarToast(erro.message);

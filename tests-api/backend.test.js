@@ -820,3 +820,175 @@ test('salvar o produto não grava por cima de uma mudança de estoque feita no m
   }
   assert.equal(rodarSql(`SELECT COUNT(*) FROM estoque WHERE produto_id = '${produto.id}'`).trim(), '0', 'excluir o produto apaga o estoque');
 });
+
+// ---------- Pedidos do site e vendas no balcão ----------
+
+const USUARIO_FUNCIONARIO_VENDAS = 'teste-func-vendas';
+
+/** A cliente (sem login) finaliza o pedido pelo site, como a página de contato faz. */
+async function enviarPedidoDoSite(corpo, cabecalhos = {}) {
+  const resposta = await fetch(`${ENDERECO_BASE}/api/pedidos.php`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...cabecalhos },
+    body: JSON.stringify(corpo),
+  });
+  return { status: resposta.status, dados: await resposta.json() };
+}
+
+function contatoLigado() {
+  return rodarSql('SELECT id FROM contatos WHERE ativo = 1 ORDER BY ordem LIMIT 1').trim();
+}
+
+/** Apaga os pedidos de teste que usaram o produto (os itens vão junto). */
+function apagarPedidosDoProduto(idProduto) {
+  rodarSql(`DELETE pedidos FROM pedidos JOIN pedido_itens ON pedido_itens.pedido_id = pedidos.id WHERE pedido_itens.produto_id = '${idProduto}'`);
+}
+
+function quantidadeEmEstoque(idProduto, tamanho) {
+  return Number(rodarSql(`SELECT quantidade FROM estoque WHERE produto_id = '${idProduto}' AND tamanho = '${tamanho}'`).trim());
+}
+
+test('pedido do site: preço do banco, esgotado recusado e pedido mínimo conferido', async () => {
+  rodarSql("UPDATE pedidos SET ip = NULL WHERE origem = 'site'");
+  const dono = criarNavegador();
+  await dono.entrar();
+  const produto = await criarProdutoComEstoque(dono, { 'P|Preto': 5, 'M|Preto': 0 }, { preco: 100 });
+  try {
+    const idContato = contatoLigado();
+    const itemP = { idProduto: produto.id, tamanho: 'P', cor: 'Preto', quantidade: 5, preco: 1 };
+
+    const pedido = await enviarPedidoDoSite({ itens: [itemP], observacoes: 'Entregar sexta', idContato });
+    assert.equal(pedido.status, 201, JSON.stringify(pedido.dados));
+    const gravado = rodarSql(`SELECT total, situacao, origem, observacoes FROM pedidos WHERE id = ${pedido.dados.numero}`).trim().split('\t');
+    assert.deepEqual(gravado, ['500.00', 'pendente', 'site', 'Entregar sexta'], 'o preço enviado pelo navegador é ignorado');
+    assert.equal(quantidadeEmEstoque(produto.id, 'P'), 5, 'pedido pendente não baixa o estoque');
+
+    const esgotado = await enviarPedidoDoSite({ itens: [{ ...itemP, tamanho: 'M' }], idContato });
+    assert.equal(esgotado.status, 409);
+    assert.match(esgotado.dados.erro, /esgotou/);
+
+    const abaixoDoMinimo = await enviarPedidoDoSite({ itens: [{ ...itemP, quantidade: 1 }], idContato });
+    assert.equal(abaixoDoMinimo.status, 422);
+
+    const semAtendente = await enviarPedidoDoSite({ itens: [itemP], idContato: 'contato-inventado' });
+    assert.equal(semAtendente.status, 409);
+
+    const outroSite = await enviarPedidoDoSite({ itens: [itemP], idContato }, { Origin: 'https://site-malicioso.example' });
+    assert.equal(outroSite.status, 403);
+
+    const naoJson = await fetch(`${ENDERECO_BASE}/api/pedidos.php`, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: '{}' });
+    assert.equal(naoJson.status, 415);
+
+    // Limite de pedidos por hora vindo do mesmo endereço
+    const ipDoTeste = rodarSql(`SELECT ip FROM pedidos WHERE id = ${pedido.dados.numero}`).trim();
+    for (let repeticao = 0; repeticao < 9; repeticao++) {
+      rodarSql(`INSERT INTO pedidos (origem, total, ip) VALUES ('site', 0, '${ipDoTeste}')`);
+    }
+    assert.equal((await enviarPedidoDoSite({ itens: [itemP], idContato })).status, 429);
+  } finally {
+    // Os pedidos de mentira do teste de limite não têm itens
+    rodarSql("DELETE pedidos FROM pedidos LEFT JOIN pedido_itens ON pedido_itens.pedido_id = pedidos.id WHERE pedidos.origem = 'site' AND pedidos.total = 0 AND pedido_itens.id IS NULL");
+    rodarSql("UPDATE pedidos SET ip = NULL WHERE origem = 'site'");
+    apagarPedidosDoProduto(produto.id);
+    await excluirProdutoDeTeste(dono, produto.id);
+  }
+});
+
+test('marcar como vendido baixa o estoque; sem peça suficiente nada muda; cancelar devolve (só o dono)', async () => {
+  rodarSql("UPDATE pedidos SET ip = NULL WHERE origem = 'site'");
+  const dono = criarNavegador();
+  await dono.entrar();
+  criarUsuarioDeTeste(USUARIO_FUNCIONARIO_VENDAS, 'funcionario');
+  const funcionario = criarNavegador();
+  await funcionario.entrar(USUARIO_FUNCIONARIO_VENDAS, SENHA_TESTE);
+  const produto = await criarProdutoComEstoque(dono, { 'P|Preto': 5, 'M|Preto': 0 }, { preco: 100 });
+  try {
+    const idContato = contatoLigado();
+    const itemP = { idProduto: produto.id, tamanho: 'P', cor: 'Preto', quantidade: 5 };
+    const primeiro = (await enviarPedidoDoSite({ itens: [itemP], idContato })).dados.numero;
+    const segundo = (await enviarPedidoDoSite({ itens: [itemP], idContato })).dados.numero;
+
+    const pendentes = await funcionario.requisitar('api/admin/pedidos.php?situacao=pendente');
+    assert.ok(pendentes.dados.pedidos.some((pedido) => pedido.id === primeiro));
+    assert.ok(pendentes.dados.pendentes >= 2);
+
+    const semForma = await funcionario.requisitar('api/admin/pedidos.php', { metodo: 'POST', corpo: { acao: 'vender', id: primeiro } });
+    assert.equal(semForma.status, 422);
+
+    const vendido = await funcionario.requisitar('api/admin/pedidos.php', { metodo: 'POST', corpo: { acao: 'vender', id: primeiro, formaPagamento: 'pix' } });
+    assert.equal(vendido.status, 200, JSON.stringify(vendido.dados));
+    assert.equal(vendido.dados.pedido.situacao, 'vendido');
+    assert.equal(vendido.dados.pedido.formaPagamento, 'pix');
+    assert.equal(vendido.dados.pedido.finalizadoPor, `Usuário ${USUARIO_FUNCIONARIO_VENDAS}`);
+    assert.equal(quantidadeEmEstoque(produto.id, 'P'), 0);
+
+    const deNovo = await funcionario.requisitar('api/admin/pedidos.php', { metodo: 'POST', corpo: { acao: 'vender', id: primeiro, formaPagamento: 'pix' } });
+    assert.equal(deNovo.status, 409);
+
+    // O segundo pedido pede 5 peças, mas o estoque zerou
+    const semPeca = await funcionario.requisitar('api/admin/pedidos.php', { metodo: 'POST', corpo: { acao: 'vender', id: segundo, formaPagamento: 'dinheiro' } });
+    assert.equal(semPeca.status, 409);
+    assert.match(semPeca.dados.erro, /Falta peça no estoque: Produto Estoque Teste \(P, Preto\): pedido 5, em estoque 0/);
+    assert.equal(rodarSql(`SELECT situacao FROM pedidos WHERE id = ${segundo}`).trim(), 'pendente');
+
+    const funcionarioCancelaVenda = await funcionario.requisitar('api/admin/pedidos.php', { metodo: 'POST', corpo: { acao: 'cancelar', id: primeiro } });
+    assert.equal(funcionarioCancelaVenda.status, 403);
+    const donoCancelaVenda = await dono.requisitar('api/admin/pedidos.php', { metodo: 'POST', corpo: { acao: 'cancelar', id: primeiro } });
+    assert.equal(donoCancelaVenda.status, 200);
+    assert.equal(quantidadeEmEstoque(produto.id, 'P'), 5, 'cancelar a venda devolve as peças');
+
+    const cancelaPendente = await funcionario.requisitar('api/admin/pedidos.php', { metodo: 'POST', corpo: { acao: 'cancelar', id: segundo } });
+    assert.equal(cancelaPendente.status, 200);
+    assert.equal(quantidadeEmEstoque(produto.id, 'P'), 5, 'cancelar um pendente não mexe no estoque');
+    const movimentos = rodarSql(`SELECT motivo, variacao FROM movimentos_estoque WHERE produto_id = '${produto.id}' AND pedido_id IS NOT NULL ORDER BY id`).trim();
+    assert.equal(movimentos, 'venda\t-5\ncancelamento\t5');
+  } finally {
+    apagarPedidosDoProduto(produto.id);
+    await excluirProdutoDeTeste(dono, produto.id);
+  }
+});
+
+test('venda no balcão nasce vendida e baixa o estoque; sem peça, nenhuma venda é gravada', async () => {
+  const funcionario = criarNavegador();
+  criarUsuarioDeTeste(USUARIO_FUNCIONARIO_VENDAS, 'funcionario');
+  await funcionario.entrar(USUARIO_FUNCIONARIO_VENDAS, SENHA_TESTE);
+  const dono = criarNavegador();
+  await dono.entrar();
+  const produto = await criarProdutoComEstoque(dono, { 'P|Preto': 3, 'M|Preto': 1 }, { preco: 40 });
+  try {
+    const venda = await funcionario.requisitar('api/admin/pedidos.php', {
+      metodo: 'POST',
+      corpo: {
+        acao: 'balcao',
+        formaPagamento: 'credito',
+        itens: [
+          { idProduto: produto.id, tamanho: 'P', cor: 'Preto', quantidade: 2 },
+          { idProduto: produto.id, tamanho: 'M', cor: 'Preto', quantidade: 1 },
+        ],
+      },
+    });
+    assert.equal(venda.status, 200, JSON.stringify(venda.dados));
+    assert.deepEqual(
+      { origem: venda.dados.pedido.origem, situacao: venda.dados.pedido.situacao, total: venda.dados.pedido.total, itens: venda.dados.pedido.itens.length },
+      { origem: 'balcao', situacao: 'vendido', total: 120, itens: 2 },
+    );
+    assert.equal(quantidadeEmEstoque(produto.id, 'P'), 1);
+    assert.equal(quantidadeEmEstoque(produto.id, 'M'), 0);
+
+    const totalDeVendasAntes = rodarSql("SELECT COUNT(*) FROM pedidos WHERE origem = 'balcao'").trim();
+    const semPeca = await funcionario.requisitar('api/admin/pedidos.php', {
+      metodo: 'POST',
+      corpo: { acao: 'balcao', formaPagamento: 'pix', itens: [{ idProduto: produto.id, tamanho: 'P', cor: 'Preto', quantidade: 2 }] },
+    });
+    assert.equal(semPeca.status, 409);
+    assert.equal(rodarSql("SELECT COUNT(*) FROM pedidos WHERE origem = 'balcao'").trim(), totalDeVendasAntes);
+    assert.equal(quantidadeEmEstoque(produto.id, 'P'), 1);
+
+    const vendidos = await funcionario.requisitar('api/admin/pedidos.php?situacao=vendido');
+    assert.ok(vendidos.dados.pedidos.some((pedido) => pedido.id === venda.dados.pedido.id));
+  } finally {
+    apagarPedidosDoProduto(produto.id);
+    await excluirProdutoDeTeste(dono, produto.id);
+    rodarSql(`UPDATE usuarios SET ativo = 0 WHERE usuario = '${USUARIO_FUNCIONARIO_VENDAS}'`);
+  }
+});

@@ -213,6 +213,12 @@
     return tamanho === TAMANHO_UNICO ? 'Único' : tamanho;
   }
 
+  const FORMAS_DE_PAGAMENTO = { pix: 'Pix', dinheiro: 'Dinheiro', credito: 'Cartão de crédito', debito: 'Cartão de débito' };
+
+  function rotularFormaDePagamento(forma) {
+    return FORMAS_DE_PAGAMENTO[forma] || '';
+  }
+
   // Depois disso o painel lembra o dono de baixar um backup novo
   const DIAS_PARA_LEMBRAR_BACKUP = 7;
   const MILISSEGUNDOS_POR_DIA = 24 * 60 * 60 * 1000;
@@ -259,6 +265,7 @@
     descreverSituacaoDoBackup,
     TAMANHO_UNICO,
     rotularTamanho,
+    rotularFormaDePagamento,
   };
 
   if (typeof module !== 'undefined' && module.exports) {
