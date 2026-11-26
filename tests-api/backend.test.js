@@ -548,3 +548,162 @@ test('a cópia automática cria o backup no servidor e guarda só os 14 mais rec
   assert.ok((await dono.requisitar('api/admin/painel.php')).dados.backup.ultimoAutomatico);
   rodarNoDocker('web', ['sh', '-c', `rm -f ${PASTA_DE_BACKUPS_NO_DOCKER}/*.zip`]);
 });
+
+// ---------- Verificação em duas etapas (2FA) ----------
+
+const crypto = require('node:crypto');
+
+const USUARIO_2FA = 'teste-2fa';
+const USUARIO_FUNCIONARIO_2FA = 'teste-func-2fa';
+
+/** Mesmo cálculo do app autenticador (TOTP, RFC 6238), para o teste gerar códigos válidos. */
+function passoAtualDoTotp() {
+  return Math.floor(Date.now() / 1000 / 30);
+}
+
+function calcularCodigoTotp(segredoBase32, passo = passoAtualDoTotp()) {
+  const alfabeto = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+  const bits = [...segredoBase32].map((letra) => alfabeto.indexOf(letra).toString(2).padStart(5, '0')).join('');
+  const segredo = Buffer.from(bits.match(/.{8}/g).map((grupo) => parseInt(grupo, 2)));
+  const mensagem = Buffer.alloc(8);
+  mensagem.writeBigUInt64BE(BigInt(passo));
+  const assinatura = crypto.createHmac('sha1', segredo).update(mensagem).digest();
+  const deslocamento = assinatura[19] & 0x0f;
+  return String((assinatura.readUInt32BE(deslocamento) & 0x7fffffff) % 1_000_000).padStart(6, '0');
+}
+
+function criarUsuarioDeTeste(usuario, papel) {
+  rodarNoDocker('web', ['php', 'ferramentas/criar-usuario.php', usuario, `Usuário ${usuario}`], `${SENHA_TESTE}\n`);
+  rodarSql(`UPDATE usuarios SET papel = '${papel}', totp_segredo = NULL, totp_ultimo_passo = NULL WHERE usuario = '${usuario}'`);
+  rodarSql(`DELETE codigos_recuperacao FROM codigos_recuperacao JOIN usuarios ON usuarios.id = codigos_recuperacao.usuario_id WHERE usuarios.usuario = '${usuario}'`);
+}
+
+/** Liga o 2FA da pessoa logada e devolve o segredo e os códigos de recuperação. */
+async function ativarDoisFatoresPeloPainel(navegador) {
+  const inicio = await navegador.requisitar('api/admin/dois-fatores.php', { metodo: 'POST', corpo: { acao: 'iniciar', senha: SENHA_TESTE } });
+  assert.equal(inicio.status, 200, JSON.stringify(inicio.dados));
+  const passoDaAtivacao = passoAtualDoTotp();
+  const confirmacao = await navegador.requisitar('api/admin/dois-fatores.php', {
+    metodo: 'POST',
+    corpo: { acao: 'confirmar', codigo: calcularCodigoTotp(inicio.dados.segredo, passoDaAtivacao) },
+  });
+  assert.equal(confirmacao.status, 200, JSON.stringify(confirmacao.dados));
+  return { segredo: inicio.dados.segredo, passoDaAtivacao, codigos: confirmacao.dados.codigosRecuperacao };
+}
+
+test('ativar o 2FA pede a senha, confere o código do app e entrega 10 códigos de recuperação', async () => {
+  criarUsuarioDeTeste(USUARIO_2FA, 'dono');
+  const navegador = criarNavegador();
+  await navegador.entrar(USUARIO_2FA, SENHA_TESTE);
+  assert.equal((await navegador.requisitar('api/admin/dois-fatores.php')).dados.ativo, false);
+  assert.equal((await navegador.requisitar('api/admin/painel.php')).dados.usuario.doisFatores, false);
+
+  const senhaErrada = await navegador.requisitar('api/admin/dois-fatores.php', { metodo: 'POST', corpo: { acao: 'iniciar', senha: 'errada-123456' } });
+  assert.equal(senhaErrada.status, 422);
+
+  const inicio = await navegador.requisitar('api/admin/dois-fatores.php', { metodo: 'POST', corpo: { acao: 'iniciar', senha: SENHA_TESTE } });
+  assert.match(inicio.dados.segredo, /^[A-Z2-7]{32}$/);
+  assert.match(inicio.dados.enderecoOtpauth, /^otpauth:\/\/totp\/Vivale%20Store%3Ateste-2fa\?secret=[A-Z2-7]{32}&issuer=Vivale%20Store/);
+  // Antes de confirmar, nada vai para o banco
+  assert.equal(rodarSql(`SELECT totp_segredo IS NULL FROM usuarios WHERE usuario = '${USUARIO_2FA}'`).trim(), '1');
+
+  const codigoErrado = await navegador.requisitar('api/admin/dois-fatores.php', { metodo: 'POST', corpo: { acao: 'confirmar', codigo: '000000' } });
+  assert.equal(codigoErrado.status, 422);
+
+  const confirmacao = await navegador.requisitar('api/admin/dois-fatores.php', {
+    metodo: 'POST',
+    corpo: { acao: 'confirmar', codigo: calcularCodigoTotp(inicio.dados.segredo) },
+  });
+  assert.equal(confirmacao.status, 200);
+  assert.equal(confirmacao.dados.codigosRecuperacao.length, 10);
+  assert.ok(confirmacao.dados.codigosRecuperacao.every((codigo) => /^[a-z2-9]{4}-[a-z2-9]{4}$/.test(codigo)));
+  assert.deepEqual({ ativo: confirmacao.dados.ativo, codigosRestantes: confirmacao.dados.codigosRestantes }, { ativo: true, codigosRestantes: 10 });
+
+  // No banco, o segredo fica criptografado e os códigos de recuperação só como hash
+  const segredoNoBanco = rodarSql(`SELECT totp_segredo FROM usuarios WHERE usuario = '${USUARIO_2FA}'`);
+  assert.ok(!segredoNoBanco.includes(inicio.dados.segredo));
+  const codigosNoBanco = rodarSql('SELECT codigo_hash FROM codigos_recuperacao');
+  assert.ok(!codigosNoBanco.includes(confirmacao.dados.codigosRecuperacao[0]));
+  assert.equal(rodarSql(`SELECT COUNT(*) FROM auditoria WHERE acao = 'dois_fatores_ativado'`).trim() !== '0', true);
+});
+
+test('com 2FA, a senha sozinha não entra: falta o código, que vale uma vez só', async () => {
+  criarUsuarioDeTeste(USUARIO_2FA, 'dono');
+  const configuracao = criarNavegador();
+  await configuracao.entrar(USUARIO_2FA, SENHA_TESTE);
+  // A confirmação usou o código de agora; o login usa o do próximo intervalo (dentro da tolerância)
+  const { segredo, passoDaAtivacao } = await ativarDoisFatoresPeloPainel(configuracao);
+
+  const navegador = criarNavegador();
+  const primeiraEtapa = await navegador.entrar(USUARIO_2FA, SENHA_TESTE);
+  assert.equal(primeiraEtapa.status, 200);
+  assert.deepEqual({ usuario: primeiraEtapa.dados.usuario, precisaCodigo: primeiraEtapa.dados.precisaCodigo }, { usuario: null, precisaCodigo: true });
+  assert.equal((await navegador.requisitar('api/admin/painel.php')).status, 401, 'só a senha não pode abrir o painel');
+
+  const codigoJaUsado = calcularCodigoTotp(segredo, passoDaAtivacao);
+  const repetido = await navegador.requisitar('api/sessao.php', { metodo: 'POST', corpo: { codigo: codigoJaUsado } });
+  assert.equal(repetido.status, 422, 'o código usado na ativação não pode servir de novo');
+
+  const segundaEtapa = await navegador.requisitar('api/sessao.php', { metodo: 'POST', corpo: { codigo: calcularCodigoTotp(segredo, passoDaAtivacao + 1) } });
+  assert.equal(segundaEtapa.status, 200, JSON.stringify(segundaEtapa.dados));
+  assert.equal(segundaEtapa.dados.usuario.usuario, USUARIO_2FA);
+  assert.equal((await navegador.requisitar('api/admin/painel.php')).status, 200);
+});
+
+test('código de recuperação entra uma vez; errar 5 códigos bloqueia', async () => {
+  criarUsuarioDeTeste(USUARIO_2FA, 'dono');
+  const configuracao = criarNavegador();
+  await configuracao.entrar(USUARIO_2FA, SENHA_TESTE);
+  const { codigos } = await ativarDoisFatoresPeloPainel(configuracao);
+
+  const comRecuperacao = criarNavegador();
+  await comRecuperacao.entrar(USUARIO_2FA, SENHA_TESTE);
+  // Aceita maiúsculas e sem hífen
+  const entrada = await comRecuperacao.requisitar('api/sessao.php', { metodo: 'POST', corpo: { codigo: codigos[0].replace('-', '').toUpperCase() } });
+  assert.equal(entrada.status, 200, JSON.stringify(entrada.dados));
+  assert.equal((await comRecuperacao.requisitar('api/admin/dois-fatores.php')).dados.codigosRestantes, 9);
+
+  const deNovo = criarNavegador();
+  await deNovo.entrar(USUARIO_2FA, SENHA_TESTE);
+  assert.equal((await deNovo.requisitar('api/sessao.php', { metodo: 'POST', corpo: { codigo: codigos[0] } })).status, 422);
+
+  for (let tentativa = 2; tentativa <= 5; tentativa++) {
+    assert.equal((await deNovo.requisitar('api/sessao.php', { metodo: 'POST', corpo: { codigo: '000000' } })).status, 422);
+  }
+  // Bloqueado: nem o código de recuperação certo passa
+  assert.equal((await deNovo.requisitar('api/sessao.php', { metodo: 'POST', corpo: { codigo: codigos[1] } })).status, 429);
+});
+
+test('desativar o 2FA pede senha e código; o dono desliga o 2FA de um funcionário', async () => {
+  criarUsuarioDeTeste(USUARIO_2FA, 'dono');
+  const dono2fa = criarNavegador();
+  await dono2fa.entrar(USUARIO_2FA, SENHA_TESTE);
+  const { codigos } = await ativarDoisFatoresPeloPainel(dono2fa);
+  const semCodigo = await dono2fa.requisitar('api/admin/dois-fatores.php', { metodo: 'POST', corpo: { acao: 'desativar', senha: SENHA_TESTE, codigo: '' } });
+  assert.equal(semCodigo.status, 422);
+  const desativado = await dono2fa.requisitar('api/admin/dois-fatores.php', { metodo: 'POST', corpo: { acao: 'desativar', senha: SENHA_TESTE, codigo: codigos[2] } });
+  assert.equal(desativado.status, 200, JSON.stringify(desativado.dados));
+  assert.equal(desativado.dados.ativo, false);
+  assert.equal(rodarSql(`SELECT COUNT(*) FROM codigos_recuperacao JOIN usuarios ON usuarios.id = usuario_id WHERE usuario = '${USUARIO_2FA}'`).trim(), '0');
+
+  criarUsuarioDeTeste(USUARIO_FUNCIONARIO_2FA, 'funcionario');
+  const funcionario = criarNavegador();
+  await funcionario.entrar(USUARIO_FUNCIONARIO_2FA, SENHA_TESTE);
+  await ativarDoisFatoresPeloPainel(funcionario);
+
+  const dono = criarNavegador();
+  await dono.entrar();
+  const equipe = (await dono.requisitar('api/admin/usuarios.php')).dados.usuarios;
+  const funcionarioNaEquipe = equipe.find((usuario) => usuario.usuario === USUARIO_FUNCIONARIO_2FA);
+  assert.equal(funcionarioNaEquipe.doisFatores, true);
+  // O funcionário não desliga o 2FA de ninguém pela equipe
+  assert.equal((await funcionario.requisitar('api/admin/usuarios.php', { metodo: 'PUT', corpo: { id: funcionarioNaEquipe.id, desativarDoisFatores: true } })).status, 403);
+
+  const desligado = await dono.requisitar('api/admin/usuarios.php', { metodo: 'PUT', corpo: { id: funcionarioNaEquipe.id, desativarDoisFatores: true } });
+  assert.equal(desligado.status, 200);
+  assert.equal(desligado.dados.usuarios.find((usuario) => usuario.usuario === USUARIO_FUNCIONARIO_2FA).doisFatores, false);
+
+  const entradaSemCodigo = await criarNavegador().entrar(USUARIO_FUNCIONARIO_2FA, SENHA_TESTE);
+  assert.ok(entradaSemCodigo.dados.usuario, 'depois de desligado, o funcionário entra só com a senha');
+  rodarSql(`UPDATE usuarios SET ativo = 0 WHERE usuario IN ('${USUARIO_2FA}', '${USUARIO_FUNCIONARIO_2FA}')`);
+});

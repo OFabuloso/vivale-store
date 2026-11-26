@@ -2,7 +2,7 @@
 /**
  * GET api/admin/painel.php — tudo o que o painel precisa ao abrir:
  * todos os produtos (inclusive inativos), todos os contatos (inclusive desligados) e o valor mínimo.
- * Para o dono, também as datas dos últimos backups.
+ * Também diz se a própria pessoa usa 2FA e, para o dono, as datas dos últimos backups.
  */
 declare(strict_types=1);
 
@@ -15,7 +15,7 @@ if (metodoDaRequisicao() !== 'GET') {
 }
 
 $respostaDoPainel = [
-    'usuario' => $usuario,
+    'usuario' => $usuario + ['doisFatores' => obterDoisFatoresDoUsuario((int) $usuario['id']) !== null],
     'produtos' => listarProdutos(false),
     'configuracao' => [
         'contatosWhatsApp' => listarContatos(false),

@@ -3,7 +3,8 @@
  * Equipe do painel (só o dono).
  *   GET  → lista de todos os usuários
  *   POST → cadastra um funcionário: { usuario, nome, senha }
- *   PUT  → altera um funcionário: { id, ativo?, novaSenha? } (desativar ou redefinir a senha)
+ *   PUT  → altera um funcionário: { id, ativo?, novaSenha?, desativarDoisFatores? }
+ *          (desativar, redefinir a senha ou desligar o 2FA de quem perdeu o celular)
  * O dono não é alterado por aqui: a senha dele se troca em "Trocar minha senha".
  */
 declare(strict_types=1);
@@ -16,7 +17,8 @@ const TAMANHO_MINIMO_SENHA_FUNCIONARIO = 10;
 function listarUsuarios(): array
 {
     $usuarios = executarConsulta(
-        'SELECT id, usuario, nome, papel, ativo, ultimo_acesso FROM usuarios ORDER BY papel = ?, nome',
+        'SELECT id, usuario, nome, papel, ativo, ultimo_acesso, totp_segredo IS NOT NULL AS dois_fatores
+         FROM usuarios ORDER BY papel = ?, nome',
         [PAPEL_FUNCIONARIO],
     )->fetchAll();
     return array_map(fn (array $usuario): array => [
@@ -26,6 +28,7 @@ function listarUsuarios(): array
         'papel' => $usuario['papel'],
         'ativo' => (bool) $usuario['ativo'],
         'ultimoAcesso' => $usuario['ultimo_acesso'],
+        'doisFatores' => (bool) $usuario['dois_fatores'],
     ], $usuarios);
 }
 
@@ -81,6 +84,10 @@ switch (metodoDaRequisicao()) {
             // Senha nova também libera quem ficou bloqueado por errar a antiga
             executarConsulta('DELETE FROM tentativas_login WHERE usuario = ?', [$funcionario['usuario']]);
             registrarAuditoria((int) $dono['id'], 'funcionario_senha_redefinida', ['usuario' => $funcionario['usuario']]);
+        }
+        if (($dados['desativarDoisFatores'] ?? false) === true) {
+            desativarDoisFatores((int) $funcionario['id']);
+            registrarAuditoria((int) $dono['id'], 'funcionario_dois_fatores_desativado', ['usuario' => $funcionario['usuario']]);
         }
         if (array_key_exists('ativo', $dados)) {
             $ativo = $dados['ativo'] === true;

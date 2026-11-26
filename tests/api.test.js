@@ -31,10 +31,10 @@ test('pega o token CSRF da sessão antes do login e o envia nas alterações', a
     { dados: { usuario: { usuario: 'dono' }, tokenCsrf: 'token-novo' } },
     { dados: { produto: { id: 'prd-1' } } },
   ];
-  const usuario = await api.entrar('dono', 'senha-secreta');
+  const resultado = await api.entrar('dono', 'senha-secreta');
   await api.salvarProduto({ nome: 'Vestido' });
 
-  assert.deepEqual(usuario, { usuario: 'dono' });
+  assert.deepEqual(resultado, { usuario: { usuario: 'dono' }, precisaCodigo: false });
   assert.equal(requisicoesFeitas[1].headers['X-CSRF-Token'], 'token-da-sessao');
   assert.deepEqual(JSON.parse(requisicoesFeitas[1].body), { usuario: 'dono', senha: 'senha-secreta' });
   // Depois do login o servidor troca o token; as próximas alterações usam o novo
@@ -122,4 +122,34 @@ test('baixa o backup como arquivo, com o nome sugerido pelo servidor', async () 
 test('erro ao baixar o backup traz a mensagem do servidor', async () => {
   proximasRespostas = [{ status: 403, dados: { erro: 'Só o dono da loja pode fazer isso.' } }];
   await assert.rejects(api.baixarBackup(), /Só o dono da loja/);
+});
+
+test('login com 2FA: a primeira etapa pede o código e a segunda envia só o código', async () => {
+  proximasRespostas = [
+    { dados: { usuario: null, precisaCodigo: true, tokenCsrf: 'token-1' } },
+    { dados: { usuario: { usuario: 'dono' }, precisaCodigo: false, tokenCsrf: 'token-2' } },
+  ];
+  const primeiraEtapa = await api.entrar('dono', 'senha-secreta');
+  assert.deepEqual(primeiraEtapa, { usuario: null, precisaCodigo: true });
+
+  const usuario = await api.confirmarCodigoDoLogin('123456');
+  assert.deepEqual(usuario, { usuario: 'dono' });
+  assert.equal(requisicoesFeitas.at(-1).caminho, 'api/sessao.php');
+  assert.deepEqual(JSON.parse(requisicoesFeitas.at(-1).body), { codigo: '123456' });
+  assert.equal(requisicoesFeitas.at(-1).headers['X-CSRF-Token'], 'token-1');
+});
+
+test('as ações do 2FA vão para o endpoint certo com a ação certa', async () => {
+  await api.iniciarDoisFatores('minha-senha');
+  await api.confirmarDoisFatores('123456');
+  await api.desativarDoisFatores('minha-senha', '654321');
+  await api.gerarNovosCodigosDeRecuperacao('111222');
+  const corpos = requisicoesFeitas.map((requisicao) => JSON.parse(requisicao.body));
+  assert.ok(requisicoesFeitas.every((requisicao) => requisicao.caminho === 'api/admin/dois-fatores.php'));
+  assert.deepEqual(corpos, [
+    { acao: 'iniciar', senha: 'minha-senha' },
+    { acao: 'confirmar', codigo: '123456' },
+    { acao: 'desativar', senha: 'minha-senha', codigo: '654321' },
+    { acao: 'novosCodigos', codigo: '111222' },
+  ]);
 });

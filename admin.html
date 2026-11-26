@@ -15,7 +15,7 @@
     <link rel="icon" href="img/marca/favicon.ico" sizes="any" />
     <link rel="icon" type="image/png" href="img/marca/favicon-32.png" sizes="32x32" />
     <link rel="apple-touch-icon" href="img/marca/apple-touch-icon.png" />
-    <link rel="stylesheet" href="css/estilos.css?v=5" />
+    <link rel="stylesheet" href="css/estilos.css?v=6" />
   </head>
   <body>
     <!-- Login (usuário e senha conferidos no servidor) -->
@@ -37,6 +37,22 @@
           <a class="botao-texto" href="index.html">Voltar para a loja</a>
         </div>
       </form>
+
+      <!-- Segunda etapa, só para quem ativou a verificação em duas etapas -->
+      <form class="cartao oculto" id="formulario-codigo" novalidate>
+        <h1>Código de verificação</h1>
+        <p>Abra o app autenticador no celular e digite o código de 6 dígitos da Vivale Store.</p>
+        <div class="campo">
+          <label for="campo-codigo">Código</label>
+          <input type="text" id="campo-codigo" inputmode="numeric" autocomplete="one-time-code" maxlength="9" required />
+          <p class="campo-ajuda">Sem o celular? Digite um dos seus códigos de recuperação (ex.: abcd-efgh).</p>
+        </div>
+        <p class="mensagem-erro oculto" id="erro-codigo"></p>
+        <button class="botao botao-primario botao-largo" id="botao-confirmar-codigo" type="submit">Confirmar</button>
+        <div class="acoes-centralizadas">
+          <button class="botao-texto" id="botao-voltar-login" type="button">Voltar</button>
+        </div>
+      </form>
     </section>
 
     <!-- Painel -->
@@ -50,6 +66,10 @@
       </header>
 
       <main class="conteudo-admin">
+        <div class="aviso aviso-dois-fatores oculto" id="aviso-dois-fatores" role="status">
+          <span>Proteja a conta do dono: ative a verificação em duas etapas.</span>
+          <button class="botao botao-contorno botao-pequeno" id="botao-ir-dois-fatores" type="button">Ativar agora</button>
+        </div>
         <div class="abas" role="tablist">
           <button class="aba" type="button" role="tab" aria-selected="true" data-aba="aba-produtos">Produtos</button>
           <button class="aba" type="button" role="tab" aria-selected="false" data-aba="aba-configuracoes">Configurações</button>
@@ -110,6 +130,86 @@
             <p class="mensagem-erro oculto" id="erro-senha"></p>
             <button class="botao botao-primario botao-largo" type="submit">Trocar senha</button>
           </form>
+
+          <div class="cartao secao-config" id="cartao-dois-fatores">
+            <h2>Verificação em duas etapas</h2>
+            <p>
+              Além da senha, o painel pede um código de 6 dígitos gerado no seu celular. Mesmo quem descobrir sua
+              senha não consegue entrar sem ele. Use um app autenticador gratuito: Google Authenticator,
+              Microsoft Authenticator ou Authy.
+            </p>
+            <p class="aviso" id="situacao-dois-fatores" role="status"></p>
+
+            <!-- Desligado: começa pedindo a senha -->
+            <form class="oculto" id="formulario-ativar-2fa" novalidate>
+              <div class="campo">
+                <label for="campo-senha-ativar-2fa">Sua senha</label>
+                <input type="password" id="campo-senha-ativar-2fa" autocomplete="current-password" required />
+              </div>
+              <p class="mensagem-erro oculto" id="erro-ativar-2fa"></p>
+              <button class="botao botao-primario botao-largo" type="submit">Ativar</button>
+            </form>
+
+            <!-- Configurando: QR code e confirmação -->
+            <form class="oculto" id="formulario-confirmar-2fa" novalidate>
+              <ol class="passos-dois-fatores">
+                <li>Instale o app autenticador no celular.</li>
+                <li>No app, toque em <strong>+</strong> e escaneie este QR code:</li>
+              </ol>
+              <div class="qr-dois-fatores" id="qr-dois-fatores"></div>
+              <p class="campo-ajuda">
+                Não consegue escanear? No app, escolha "inserir chave" e digite:
+                <code class="chave-dois-fatores" id="chave-dois-fatores"></code>
+              </p>
+              <div class="campo">
+                <label for="campo-codigo-confirmar-2fa">3. Digite o código de 6 dígitos que aparece no app</label>
+                <input type="text" id="campo-codigo-confirmar-2fa" inputmode="numeric" autocomplete="one-time-code" maxlength="6" required />
+              </div>
+              <p class="mensagem-erro oculto" id="erro-confirmar-2fa"></p>
+              <div class="grupo-botoes">
+                <button class="botao botao-primario" type="submit">Confirmar e ativar</button>
+                <button class="botao botao-contorno" id="botao-cancelar-2fa" type="button">Cancelar</button>
+              </div>
+            </form>
+
+            <!-- Logo depois de ativar (ou de gerar novos): os códigos de recuperação, que só aparecem uma vez -->
+            <div class="oculto" id="etapa-codigos-recuperacao">
+              <p>
+                <strong>Guarde estes códigos de recuperação.</strong> Cada um permite entrar uma vez sem o celular.
+                Eles não vão aparecer de novo.
+              </p>
+              <ul class="lista-codigos-recuperacao" id="lista-codigos-recuperacao"></ul>
+              <div class="grupo-botoes">
+                <button class="botao botao-contorno" id="botao-baixar-codigos" type="button">Baixar códigos (.txt)</button>
+                <button class="botao botao-primario" id="botao-codigos-guardados" type="button">Já guardei</button>
+              </div>
+            </div>
+
+            <!-- Ligado: trocar os códigos de recuperação ou desligar -->
+            <div class="oculto" id="gerenciar-2fa">
+              <form id="formulario-novos-codigos" novalidate>
+                <div class="campo">
+                  <label for="campo-codigo-novos-codigos">Código do app (para gerar novos códigos de recuperação)</label>
+                  <input type="text" id="campo-codigo-novos-codigos" inputmode="numeric" autocomplete="one-time-code" maxlength="9" required />
+                </div>
+                <p class="mensagem-erro oculto" id="erro-novos-codigos"></p>
+                <button class="botao botao-contorno botao-largo" type="submit">Gerar novos códigos de recuperação</button>
+              </form>
+              <form class="formulario-desativar-2fa" id="formulario-desativar-2fa" novalidate>
+                <h3>Desativar</h3>
+                <div class="campo">
+                  <label for="campo-senha-desativar-2fa">Sua senha</label>
+                  <input type="password" id="campo-senha-desativar-2fa" autocomplete="current-password" required />
+                </div>
+                <div class="campo">
+                  <label for="campo-codigo-desativar-2fa">Código do app ou de recuperação</label>
+                  <input type="text" id="campo-codigo-desativar-2fa" inputmode="numeric" autocomplete="one-time-code" maxlength="9" required />
+                </div>
+                <p class="mensagem-erro oculto" id="erro-desativar-2fa"></p>
+                <button class="botao botao-perigo botao-largo" type="submit">Desativar a verificação em duas etapas</button>
+              </form>
+            </div>
+          </div>
 
           <div class="cartao secao-config oculto" data-somente-dono>
             <h2>Cópia de segurança</h2>
@@ -254,14 +354,15 @@
     </dialog>
 
     <!-- Ordem importa: dados → lógica → telas → página -->
-    <script src="js/dados/dados-iniciais.js?v=5"></script>
-    <script src="js/logica/utilidades.js?v=5"></script>
-    <script src="js/logica/contatos.js?v=5"></script>
-    <script src="js/logica/armazenamento.js?v=5"></script>
-    <script src="js/logica/api.js?v=5"></script>
-    <script src="js/logica/imagem.js?v=5"></script>
-    <script src="js/telas/componentes.js?v=5"></script>
-    <script src="js/telas/tela-admin.js?v=5"></script>
-    <script src="js/paginas/pagina-admin.js?v=5"></script>
+    <script src="js/dados/dados-iniciais.js?v=6"></script>
+    <script src="js/logica/utilidades.js?v=6"></script>
+    <script src="js/logica/contatos.js?v=6"></script>
+    <script src="js/logica/armazenamento.js?v=6"></script>
+    <script src="js/logica/api.js?v=6"></script>
+    <script src="js/logica/imagem.js?v=6"></script>
+    <script src="js/telas/componentes.js?v=6"></script>
+    <script src="js/vendor/qrcode-generator.js?v=6"></script>
+    <script src="js/telas/tela-admin.js?v=6"></script>
+    <script src="js/paginas/pagina-admin.js?v=6"></script>
   </body>
 </html>

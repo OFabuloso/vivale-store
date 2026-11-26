@@ -19,14 +19,7 @@ $senhaAtual = (string) ($dados['senhaAtual'] ?? '');
 $novaSenha = (string) ($dados['novaSenha'] ?? '');
 
 // Mesmo limite do login: impede adivinhar a senha atual a partir de uma sessão aberta
-if (contarTentativasRecentes('usuario', $usuario['usuario']) >= LIMITE_TENTATIVAS_POR_USUARIO) {
-    throw new ErroDaApi(429, 'Muitas tentativas com erro. Aguarde 15 minutos e tente de novo.');
-}
-$hashAtual = executarConsulta('SELECT senha_hash FROM usuarios WHERE id = ?', [$usuario['id']])->fetchColumn();
-if (!password_verify($senhaAtual, (string) $hashAtual)) {
-    executarConsulta('INSERT INTO tentativas_login (ip, usuario) VALUES (?, ?)', [ipDaRequisicao(), $usuario['usuario']]);
-    throw new ErroDaApi(422, 'A senha atual está incorreta.');
-}
+exigirSenhaCorreta($usuario, $senhaAtual);
 if (mb_strlen($novaSenha) < TAMANHO_MINIMO_NOVA_SENHA) {
     throw new ErroDaApi(422, 'A nova senha precisa ter pelo menos ' . TAMANHO_MINIMO_NOVA_SENHA . ' caracteres.');
 }

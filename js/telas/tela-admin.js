@@ -43,6 +43,9 @@
 
     criarBotoesVerSenha();
     document.getElementById('formulario-login').addEventListener('submit', entrar);
+    document.getElementById('formulario-codigo').addEventListener('submit', confirmarCodigoDoLogin);
+    document.getElementById('botao-voltar-login').addEventListener('click', () => mostrarLogin());
+    configurarDoisFatores();
     document.getElementById('botao-sair').addEventListener('click', sair);
     document.querySelectorAll('.aba').forEach((aba) => aba.addEventListener('click', trocarAba));
 
@@ -142,6 +145,8 @@
   function mostrarLogin(mensagem = '') {
     elementos.painel.classList.add('oculto');
     elementos.telaLogin.classList.remove('oculto');
+    document.getElementById('formulario-login').classList.remove('oculto');
+    document.getElementById('formulario-codigo').classList.add('oculto');
     const elementoErro = document.getElementById('erro-login');
     elementoErro.textContent = mensagem;
     elementoErro.classList.toggle('oculto', !mensagem);
@@ -160,9 +165,13 @@
 
     botaoEntrar.disabled = true;
     try {
-      await api.entrar(campoUsuario.value.trim(), campoSenha.value);
+      const { precisaCodigo } = await api.entrar(campoUsuario.value.trim(), campoSenha.value);
       campoSenha.value = '';
       esconderSenhas();
+      if (precisaCodigo) {
+        mostrarEtapaDoCodigo();
+        return;
+      }
       await abrirPainel();
     } catch (erro) {
       mostrarLogin(erro.message);
@@ -196,6 +205,8 @@
       carregarEquipe();
       mostrarSituacaoDoBackup(dadosDoPainel.backup);
     }
+    document.getElementById('aviso-dois-fatores').classList.toggle('oculto', !ehDono() || usuarioLogado.doisFatores);
+    carregarDoisFatores();
   }
 
   function ehDono() {
@@ -612,6 +623,203 @@
     }
   }
 
+  // ---------- Verificação em duas etapas (2FA) ----------
+
+  /** Segunda etapa do login: a senha estava certa, falta o código do app. */
+  function mostrarEtapaDoCodigo() {
+    document.getElementById('formulario-login').classList.add('oculto');
+    const formularioCodigo = document.getElementById('formulario-codigo');
+    formularioCodigo.reset();
+    mostrarErroEm('erro-codigo', '');
+    formularioCodigo.classList.remove('oculto');
+    document.getElementById('campo-codigo').focus();
+  }
+
+  async function confirmarCodigoDoLogin(evento) {
+    evento.preventDefault();
+    const campoCodigo = document.getElementById('campo-codigo');
+    const codigo = campoCodigo.value.trim();
+    if (!codigo) return mostrarErroEm('erro-codigo', 'Digite o código do app.');
+
+    const botaoConfirmar = document.getElementById('botao-confirmar-codigo');
+    botaoConfirmar.disabled = true;
+    try {
+      await api.confirmarCodigoDoLogin(codigo);
+      await abrirPainel();
+    } catch (erro) {
+      // 401 aqui é o tempo para digitar o código que acabou: volta para a senha
+      if (erro.codigoHttp === 401) {
+        mostrarLogin(erro.message);
+      } else {
+        mostrarErroEm('erro-codigo', erro.message);
+        campoCodigo.select();
+      }
+    } finally {
+      botaoConfirmar.disabled = false;
+    }
+  }
+
+  function configurarDoisFatores() {
+    document.getElementById('formulario-ativar-2fa').addEventListener('submit', iniciarDoisFatores);
+    document.getElementById('formulario-confirmar-2fa').addEventListener('submit', confirmarDoisFatores);
+    document.getElementById('botao-cancelar-2fa').addEventListener('click', carregarDoisFatores);
+    document.getElementById('formulario-desativar-2fa').addEventListener('submit', desativarDoisFatores);
+    document.getElementById('formulario-novos-codigos').addEventListener('submit', gerarNovosCodigos);
+    document.getElementById('botao-baixar-codigos').addEventListener('click', baixarCodigosDeRecuperacao);
+    document.getElementById('botao-codigos-guardados').addEventListener('click', carregarDoisFatores);
+    document.getElementById('botao-ir-dois-fatores').addEventListener('click', () => {
+      selecionarAba('aba-configuracoes');
+      document.getElementById('cartao-dois-fatores').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }
+
+  /** Mostra só uma das etapas do cartão: desligado, configurando, códigos ou ligado. */
+  function mostrarEtapaDoisFatores(etapa) {
+    const etapas = {
+      desligado: 'formulario-ativar-2fa',
+      configurando: 'formulario-confirmar-2fa',
+      codigos: 'etapa-codigos-recuperacao',
+      ligado: 'gerenciar-2fa',
+    };
+    Object.entries(etapas).forEach(([nomeEtapa, idElemento]) => {
+      document.getElementById(idElemento).classList.toggle('oculto', nomeEtapa !== etapa);
+    });
+    ['erro-ativar-2fa', 'erro-confirmar-2fa', 'erro-desativar-2fa', 'erro-novos-codigos'].forEach((idErro) => mostrarErroEm(idErro, ''));
+  }
+
+  function mostrarSituacaoDoisFatores({ ativo, codigosRestantes }) {
+    const elementoSituacao = document.getElementById('situacao-dois-fatores');
+    const poucosCodigos = ativo && codigosRestantes <= 3;
+    elementoSituacao.textContent = ativo
+      ? `Ativa. Restam ${codigosRestantes} códigos de recuperação.${poucosCodigos ? ' Gere novos códigos.' : ''}`
+      : 'Desligada. Ative para proteger sua conta.';
+    elementoSituacao.classList.toggle('sucesso', ativo && !poucosCodigos);
+    if (usuarioLogado) usuarioLogado.doisFatores = ativo;
+    document.getElementById('aviso-dois-fatores').classList.toggle('oculto', !ehDono() || ativo);
+  }
+
+  async function carregarDoisFatores() {
+    try {
+      const situacao = await api.obterDoisFatores();
+      mostrarSituacaoDoisFatores(situacao);
+      mostrarEtapaDoisFatores(situacao.ativo ? 'ligado' : 'desligado');
+    } catch (erro) {
+      tratarErroDoServidor(erro, (mensagem) => {
+        document.getElementById('situacao-dois-fatores').textContent = mensagem;
+      });
+    }
+  }
+
+  async function iniciarDoisFatores(evento) {
+    evento.preventDefault();
+    const campoSenha = document.getElementById('campo-senha-ativar-2fa');
+    if (!campoSenha.value) return mostrarErroEm('erro-ativar-2fa', 'Digite sua senha.');
+    const botaoAtivar = evento.target.querySelector('button[type="submit"]');
+    botaoAtivar.disabled = true;
+    try {
+      const { segredo, enderecoOtpauth } = await api.iniciarDoisFatores(campoSenha.value);
+      evento.target.reset();
+      esconderSenhas();
+      desenharQrCode(enderecoOtpauth);
+      // Em grupos de 4 letras, mais fácil de digitar no app
+      document.getElementById('chave-dois-fatores').textContent = segredo.match(/.{1,4}/g).join(' ');
+      document.getElementById('formulario-confirmar-2fa').reset();
+      mostrarEtapaDoisFatores('configurando');
+      document.getElementById('campo-codigo-confirmar-2fa').focus();
+    } catch (erro) {
+      tratarErroDoServidor(erro, (mensagem) => mostrarErroEm('erro-ativar-2fa', mensagem));
+    } finally {
+      botaoAtivar.disabled = false;
+    }
+  }
+
+  function desenharQrCode(endereco) {
+    const geradorQr = raiz.qrcode(0, 'M');
+    geradorQr.addData(endereco);
+    geradorQr.make();
+    const areaQr = document.getElementById('qr-dois-fatores');
+    areaQr.innerHTML = geradorQr.createSvgTag({ cellSize: 5, margin: 4, scalable: true });
+    areaQr.querySelector('svg').setAttribute('aria-label', 'QR code para o app autenticador');
+  }
+
+  async function confirmarDoisFatores(evento) {
+    evento.preventDefault();
+    const codigo = document.getElementById('campo-codigo-confirmar-2fa').value.trim();
+    if (!/^\d{6}$/.test(codigo)) return mostrarErroEm('erro-confirmar-2fa', 'Digite os 6 números que aparecem no app.');
+    const botaoConfirmar = evento.target.querySelector('button[type="submit"]');
+    botaoConfirmar.disabled = true;
+    try {
+      const resultado = await api.confirmarDoisFatores(codigo);
+      mostrarSituacaoDoisFatores(resultado);
+      mostrarCodigosDeRecuperacao(resultado.codigosRecuperacao);
+      componentes.mostrarToast('Verificação em duas etapas ativada');
+    } catch (erro) {
+      tratarErroDoServidor(erro, (mensagem) => mostrarErroEm('erro-confirmar-2fa', mensagem));
+    } finally {
+      botaoConfirmar.disabled = false;
+    }
+  }
+
+  let codigosDeRecuperacaoNaTela = [];
+
+  function mostrarCodigosDeRecuperacao(codigos) {
+    codigosDeRecuperacaoNaTela = codigos;
+    document.getElementById('lista-codigos-recuperacao').innerHTML = codigos
+      .map((codigo) => `<li><code>${escaparHtml(codigo)}</code></li>`)
+      .join('');
+    mostrarEtapaDoisFatores('codigos');
+  }
+
+  function baixarCodigosDeRecuperacao() {
+    const conteudo =
+      'Códigos de recuperação do painel da Vivale Store\n' +
+      `Usuário: ${usuarioLogado ? usuarioLogado.usuario : ''}\n\n` +
+      'Cada código permite entrar uma vez sem o celular. Guarde em lugar seguro.\n\n' +
+      codigosDeRecuperacaoNaTela.join('\n') +
+      '\n';
+    salvarArquivoNoComputador(new Blob([conteudo], { type: 'text/plain;charset=utf-8' }), 'vivale-codigos-de-recuperacao.txt');
+  }
+
+  async function desativarDoisFatores(evento) {
+    evento.preventDefault();
+    const senha = document.getElementById('campo-senha-desativar-2fa').value;
+    const codigo = document.getElementById('campo-codigo-desativar-2fa').value.trim();
+    if (!senha || !codigo) return mostrarErroEm('erro-desativar-2fa', 'Digite sua senha e o código do app.');
+    if (!confirm('Desativar a verificação em duas etapas? Sua conta fica protegida só pela senha.')) return;
+    const botaoDesativar = evento.target.querySelector('button[type="submit"]');
+    botaoDesativar.disabled = true;
+    try {
+      const situacao = await api.desativarDoisFatores(senha, codigo);
+      evento.target.reset();
+      esconderSenhas();
+      mostrarSituacaoDoisFatores(situacao);
+      mostrarEtapaDoisFatores('desligado');
+      componentes.mostrarToast('Verificação em duas etapas desativada');
+    } catch (erro) {
+      tratarErroDoServidor(erro, (mensagem) => mostrarErroEm('erro-desativar-2fa', mensagem));
+    } finally {
+      botaoDesativar.disabled = false;
+    }
+  }
+
+  async function gerarNovosCodigos(evento) {
+    evento.preventDefault();
+    const codigo = document.getElementById('campo-codigo-novos-codigos').value.trim();
+    if (!codigo) return mostrarErroEm('erro-novos-codigos', 'Digite o código do app.');
+    const botaoGerar = evento.target.querySelector('button[type="submit"]');
+    botaoGerar.disabled = true;
+    try {
+      const resultado = await api.gerarNovosCodigosDeRecuperacao(codigo);
+      evento.target.reset();
+      mostrarSituacaoDoisFatores(resultado);
+      mostrarCodigosDeRecuperacao(resultado.codigosRecuperacao);
+    } catch (erro) {
+      tratarErroDoServidor(erro, (mensagem) => mostrarErroEm('erro-novos-codigos', mensagem));
+    } finally {
+      botaoGerar.disabled = false;
+    }
+  }
+
   // ---------- Equipe (só o dono) ----------
 
   async function carregarEquipe() {
@@ -637,6 +845,7 @@
       ? `<div class="grupo-botoes">
           <button class="botao botao-contorno botao-pequeno" type="button" data-acao="nova-senha">Nova senha</button>
           <button class="botao botao-contorno botao-pequeno" type="button" data-acao="alternar-funcionario">${usuario.ativo ? 'Desativar' : 'Reativar'}</button>
+          ${usuario.doisFatores ? '<button class="botao botao-contorno botao-pequeno" type="button" data-acao="desligar-2fa">Desligar 2FA</button>' : ''}
         </div>`
       : '';
     return `
@@ -646,6 +855,7 @@
           <strong>${escaparHtml(usuario.nome)}</strong>
           <span class="etiqueta">${ehFuncionario ? 'Funcionário' : 'Dono'}</span>
           ${usuario.ativo ? '' : '<span class="etiqueta">Desativado</span>'}
+          ${usuario.doisFatores ? '<span class="etiqueta">2FA ativo</span>' : ''}
           <p>Usuário: ${escaparHtml(usuario.usuario)} · último acesso: ${escaparHtml(ultimoAcesso)}</p>
         </div>
         ${acoes}
@@ -708,6 +918,19 @@
       try {
         renderizarEquipe(await api.alterarFuncionario({ id: idFuncionario, ativo: !vaiDesativar }));
         componentes.mostrarToast(vaiDesativar ? `${nomeFuncionario} desativado` : `${nomeFuncionario} reativado`);
+      } catch (erro) {
+        botao.disabled = false;
+        tratarErroDoServidor(erro, (mensagem) => alert(mensagem));
+      }
+    } else if (botao.dataset.acao === 'desligar-2fa') {
+      const mensagemConfirmacao =
+        `Desligar a verificação em duas etapas de ${nomeFuncionario}? ` +
+        'Use só se a pessoa perdeu o celular e os códigos de recuperação. Depois ela pode ativar de novo.';
+      if (!confirm(mensagemConfirmacao)) return;
+      botao.disabled = true;
+      try {
+        renderizarEquipe(await api.alterarFuncionario({ id: idFuncionario, desativarDoisFatores: true }));
+        componentes.mostrarToast(`2FA de ${nomeFuncionario} desligado`);
       } catch (erro) {
         botao.disabled = false;
         tratarErroDoServidor(erro, (mensagem) => alert(mensagem));

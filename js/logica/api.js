@@ -106,9 +106,18 @@
     return (await requisitar('api/sessao.php')).usuario;
   }
 
+  /**
+   * Primeira etapa do login. Devolve { usuario, precisaCodigo }: com a verificação em duas etapas
+   * ligada, usuario vem null e precisaCodigo true, e o login termina em confirmarCodigoDoLogin().
+   */
   async function entrar(usuario, senha) {
     if (!tokenCsrf) await obterSessao();
-    return (await requisitar('api/sessao.php', { metodo: 'POST', corpo: { usuario, senha } })).usuario;
+    const dados = await requisitar('api/sessao.php', { metodo: 'POST', corpo: { usuario, senha } });
+    return { usuario: dados.usuario, precisaCodigo: dados.precisaCodigo === true };
+  }
+
+  async function confirmarCodigoDoLogin(codigo) {
+    return (await requisitar('api/sessao.php', { metodo: 'POST', corpo: { codigo } })).usuario;
   }
 
   async function sair() {
@@ -157,6 +166,34 @@
     return requisitar('api/admin/senha.php', { metodo: 'POST', corpo: { senhaAtual, novaSenha } });
   }
 
+  // ---------- Verificação em duas etapas (2FA) de quem está logado ----------
+
+  function alterarDoisFatores(corpo) {
+    return requisitar('api/admin/dois-fatores.php', { metodo: 'POST', corpo });
+  }
+
+  /** Devolve { segredo, enderecoOtpauth } para montar o QR code. */
+  function iniciarDoisFatores(senha) {
+    return alterarDoisFatores({ acao: 'iniciar', senha });
+  }
+
+  /** Liga o 2FA; devolve { ativo, codigosRestantes, codigosRecuperacao }. */
+  function confirmarDoisFatores(codigo) {
+    return alterarDoisFatores({ acao: 'confirmar', codigo });
+  }
+
+  function desativarDoisFatores(senha, codigo) {
+    return alterarDoisFatores({ acao: 'desativar', senha, codigo });
+  }
+
+  function gerarNovosCodigosDeRecuperacao(codigo) {
+    return alterarDoisFatores({ acao: 'novosCodigos', codigo });
+  }
+
+  function obterDoisFatores() {
+    return requisitar('api/admin/dois-fatores.php');
+  }
+
   // ---------- Equipe (só o dono) ----------
 
   async function listarEquipe() {
@@ -180,6 +217,7 @@
     sincronizarCatalogo,
     obterSessao,
     entrar,
+    confirmarCodigoDoLogin,
     sair,
     carregarPainel,
     salvarProduto,
@@ -192,6 +230,11 @@
     listarEquipe,
     cadastrarFuncionario,
     alterarFuncionario,
+    obterDoisFatores,
+    iniciarDoisFatores,
+    confirmarDoisFatores,
+    desativarDoisFatores,
+    gerarNovosCodigosDeRecuperacao,
   };
 
   if (typeof module !== 'undefined' && module.exports) {

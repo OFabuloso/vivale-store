@@ -10,6 +10,9 @@ const LIMITE_TENTATIVAS_POR_USUARIO = 5;
 const LIMITE_TENTATIVAS_POR_IP = 20;
 const PAPEL_DONO = 'dono';
 const PAPEL_FUNCIONARIO = 'funcionario';
+// Tempo para digitar o código do app depois de acertar a senha
+const SEGUNDOS_PARA_DIGITAR_CODIGO = 5 * 60;
+const MENSAGEM_MUITAS_TENTATIVAS = 'Muitas tentativas com erro. Aguarde 15 minutos e tente de novo.';
 
 function iniciarSessao(): void
 {
@@ -136,16 +139,29 @@ function contarTentativasRecentes(string $coluna, string $valor): int
     return (int) executarConsulta($sql, [$valor])->fetchColumn();
 }
 
-/** Confere usuário e senha. Devolve o usuário logado ou lança ErroDaApi. */
-function fazerLogin(string $nomeUsuario, string $senha): array
+function registrarTentativaErrada(string $nomeUsuario): void
 {
-    $ip = ipDaRequisicao();
+    executarConsulta('INSERT INTO tentativas_login (ip, usuario) VALUES (?, ?)', [ipDaRequisicao(), $nomeUsuario]);
+}
+
+function recusarSeHouverTentativasDemais(string $nomeUsuario): void
+{
     if (
         contarTentativasRecentes('usuario', $nomeUsuario) >= LIMITE_TENTATIVAS_POR_USUARIO
-        || contarTentativasRecentes('ip', $ip) >= LIMITE_TENTATIVAS_POR_IP
+        || contarTentativasRecentes('ip', ipDaRequisicao()) >= LIMITE_TENTATIVAS_POR_IP
     ) {
-        throw new ErroDaApi(429, 'Muitas tentativas com erro. Aguarde 15 minutos e tente de novo.');
+        throw new ErroDaApi(429, MENSAGEM_MUITAS_TENTATIVAS);
     }
+}
+
+/**
+ * Primeira etapa do login: confere usuário e senha.
+ * Sem 2FA, já entra e devolve o usuário. Com 2FA, guarda o login como pendente e devolve null:
+ * a pessoa precisa confirmar o código do app em confirmarCodigoDoLogin().
+ */
+function fazerLogin(string $nomeUsuario, string $senha): ?array
+{
+    recusarSeHouverTentativasDemais($nomeUsuario);
 
     $usuario = executarConsulta(
         'SELECT id, usuario, nome, papel, senha_hash FROM usuarios WHERE usuario = ? AND ativo = 1',
@@ -161,14 +177,58 @@ function fazerLogin(string $nomeUsuario, string $senha): array
     }
 
     if (!$usuario || !$senhaCorreta) {
-        executarConsulta('INSERT INTO tentativas_login (ip, usuario) VALUES (?, ?)', [$ip, $nomeUsuario]);
+        registrarTentativaErrada($nomeUsuario);
         throw new ErroDaApi(401, 'Usuário ou senha incorretos.');
     }
 
-    executarConsulta('DELETE FROM tentativas_login WHERE usuario = ?', [$nomeUsuario]);
     if (password_needs_rehash($usuario['senha_hash'], algoritmoDeSenha())) {
         executarConsulta('UPDATE usuarios SET senha_hash = ? WHERE id = ?', [gerarHashDeSenha($senha), $usuario['id']]);
     }
+    unset($usuario['senha_hash']);
+
+    if (obterDoisFatoresDoUsuario((int) $usuario['id']) !== null) {
+        // Senha certa, mas ainda não entrou: falta o código do app
+        session_regenerate_id(true);
+        $_SESSION['login_pendente'] = ['id_usuario' => (int) $usuario['id'], 'expira_em' => time() + SEGUNDOS_PARA_DIGITAR_CODIGO];
+        return null;
+    }
+    return concluirLogin($usuario);
+}
+
+/** Segunda etapa do login: código do app autenticador ou código de recuperação. */
+function confirmarCodigoDoLogin(string $codigo): array
+{
+    $pendente = $_SESSION['login_pendente'] ?? null;
+    if ($pendente === null || $pendente['expira_em'] < time()) {
+        unset($_SESSION['login_pendente']);
+        throw new ErroDaApi(401, 'O tempo para digitar o código acabou. Entre com a senha de novo.');
+    }
+    $usuario = executarConsulta(
+        'SELECT id, usuario, nome, papel FROM usuarios WHERE id = ? AND ativo = 1',
+        [$pendente['id_usuario']],
+    )->fetch();
+    if (!$usuario) {
+        unset($_SESSION['login_pendente']);
+        throw new ErroDaApi(401, 'Usuário ou senha incorretos.');
+    }
+
+    recusarSeHouverTentativasDemais($usuario['usuario']);
+    $tipoDeCodigo = conferirSegundoFator((int) $usuario['id'], $codigo);
+    if ($tipoDeCodigo === null) {
+        registrarTentativaErrada($usuario['usuario']);
+        throw new ErroDaApi(422, 'Código incorreto. Confira o app e tente de novo.');
+    }
+    unset($_SESSION['login_pendente']);
+    if ($tipoDeCodigo === 'recuperacao') {
+        registrarAuditoria((int) $usuario['id'], 'codigo_recuperacao_usado');
+    }
+    return concluirLogin($usuario);
+}
+
+/** Login completo: abre a sessão da pessoa. */
+function concluirLogin(array $usuario): array
+{
+    executarConsulta('DELETE FROM tentativas_login WHERE usuario = ?', [$usuario['usuario']]);
     executarConsulta('UPDATE usuarios SET ultimo_acesso = NOW() WHERE id = ?', [$usuario['id']]);
 
     // Novo identificador de sessão a cada login (evita sequestro de sessão)
@@ -176,9 +236,20 @@ function fazerLogin(string $nomeUsuario, string $senha): array
     $_SESSION['id_usuario'] = (int) $usuario['id'];
     $_SESSION['token_csrf'] = bin2hex(random_bytes(32));
     registrarAuditoria((int) $usuario['id'], 'login');
-
-    unset($usuario['senha_hash']);
     return $usuario;
+}
+
+/** Para ações sensíveis com a sessão já aberta: confere a senha, com o mesmo limite de erros do login. */
+function exigirSenhaCorreta(array $usuario, string $senha, string $mensagemDeErro = 'A senha atual está incorreta.'): void
+{
+    if (contarTentativasRecentes('usuario', $usuario['usuario']) >= LIMITE_TENTATIVAS_POR_USUARIO) {
+        throw new ErroDaApi(429, MENSAGEM_MUITAS_TENTATIVAS);
+    }
+    $hashDaSenha = executarConsulta('SELECT senha_hash FROM usuarios WHERE id = ?', [$usuario['id']])->fetchColumn();
+    if (!password_verify($senha, (string) $hashDaSenha)) {
+        registrarTentativaErrada($usuario['usuario']);
+        throw new ErroDaApi(422, $mensagemDeErro);
+    }
 }
 
 function algoritmoDeSenha(): string

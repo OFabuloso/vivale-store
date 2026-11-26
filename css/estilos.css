@@ -1925,6 +1925,80 @@ fieldset.campo legend {
   opacity: 0.55;
 }
 
+/* ---------- Verificação em duas etapas ---------- */
+
+/* Aviso no topo do painel enquanto o dono não ativa o 2FA */
+.aviso-dois-fatores {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.passos-dois-fatores {
+  margin: 0 0 12px;
+  padding-left: 20px;
+  font-size: 14px;
+}
+
+/* O QR code precisa de fundo branco e margem para a câmera do celular ler, mesmo no tema escuro */
+.qr-dois-fatores {
+  width: 100%;
+  max-width: 220px;
+  margin: 0 auto 12px;
+  padding: 8px;
+  border-radius: var(--raio);
+  background: #ffffff;
+}
+
+.qr-dois-fatores svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.chave-dois-fatores {
+  display: block;
+  margin-top: 6px;
+  font-size: 14px;
+  letter-spacing: 0.04em;
+  word-break: break-all;
+  user-select: all;
+}
+
+.lista-codigos-recuperacao {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 12px 0 16px;
+  padding: 0;
+  list-style: none;
+}
+
+.lista-codigos-recuperacao code {
+  display: block;
+  padding: 8px;
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio);
+  background: var(--cor-campo);
+  font-size: 15px;
+  text-align: center;
+  letter-spacing: 0.06em;
+}
+
+.formulario-desativar-2fa {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--cor-borda);
+}
+
+.formulario-desativar-2fa h3 {
+  margin: 0 0 10px;
+  font-size: 15px;
+}
+
 /* ---------- Tablet em pé e maiores (a partir de 768px) ---------- */
 
 @media (min-width: 768px) {
