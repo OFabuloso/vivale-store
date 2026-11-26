@@ -13,6 +13,7 @@ services:
     volumes:
       - ./:/home/u151095779/domains/vivalestore.com.br/public_html
       - ./docker/dev/config:/home/u151095779/domains/vivalestore.com.br/config:ro
+      # Senha do servidor de teste: sem uso desde que o .htpasswd saiu do site (2026-11-26)
       - ./docker/dev/.htpasswd:/home/u151095779/domains/vivalestore.com.br/.htpasswd:ro
       - uploads:/home/u151095779/domains/vivalestore.com.br/uploads
     depends_on:

@@ -4,14 +4,9 @@
 Options -Indexes
 DirectoryIndex index.html
 
-# Painel do vendedor: o servidor pede usuário e senha antes de entregar a página.
-# O arquivo de senhas fica fora da public_html e fora do Git (criado pelo hPanel).
-<Files "admin.html">
-  AuthType Basic
-  AuthName "Area do Vendedor"
-  AuthUserFile /home/u151095779/domains/vivalestore.com.br/.htpasswd
-  Require valid-user
-</Files>
+# Painel do vendedor: o acesso é conferido pelo login do próprio painel (api/sessao.php),
+# com senha por pessoa, bloqueio após erros e permissões de dono e funcionário.
+# A senha extra do servidor (.htpasswd) foi retirada em 2026-11-26.
 
 <IfModule mod_rewrite.c>
   RewriteEngine On

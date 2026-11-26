@@ -18,8 +18,6 @@ const sharp = require('sharp');
 const ENDERECO_BASE = process.env.ENDERECO_API || 'http://localhost:8081';
 const USUARIO_TESTE = 'teste-painel';
 const SENHA_TESTE = 'senha-de-teste-123';
-// Senha do .htpasswd do ambiente local (docker/dev/.htpasswd)
-const SENHA_DO_SERVIDOR = `Basic ${Buffer.from('teste:teste-local').toString('base64')}`;
 const RAIZ_DO_PROJETO = path.join(__dirname, '..');
 
 function rodarNoDocker(servico, comando, entrada = '') {
@@ -35,13 +33,12 @@ function rodarSql(sql) {
 }
 
 /** Navegador simplificado: guarda o cookie de sessão e o token CSRF entre as requisições. */
-function criarNavegador({ comSenhaDoServidor = true } = {}) {
+function criarNavegador() {
   let cookieDeSessao = '';
   let tokenCsrf = '';
 
   async function requisitar(caminho, { metodo = 'GET', corpo, enviarCsrf = true, cabecalhos = {} } = {}) {
     const cabecalhosFinais = { ...cabecalhos };
-    if (comSenhaDoServidor) cabecalhosFinais.Authorization = SENHA_DO_SERVIDOR;
     if (cookieDeSessao) cabecalhosFinais.Cookie = cookieDeSessao;
     if (metodo !== 'GET' && enviarCsrf) cabecalhosFinais['X-CSRF-Token'] = tokenCsrf;
     let corpoEnviado = corpo;
@@ -87,7 +84,7 @@ test('o catálogo público traz os produtos ativos e só os contatos ligados', a
     "INSERT INTO contatos (id, nome, numero, ativo, ordem) VALUES ('contato-teste-off', 'Desligado', '5521900001111', 0, 9) " +
       'ON DUPLICATE KEY UPDATE ativo = 0',
   );
-  const navegador = criarNavegador({ comSenhaDoServidor: false });
+  const navegador = criarNavegador();
   const { status, dados } = await navegador.requisitar('api/catalogo.php');
 
   assert.equal(status, 200);
@@ -102,11 +99,14 @@ test('o catálogo público traz os produtos ativos e só os contatos ligados', a
 
 // ---------- Login ----------
 
-test('login e API do painel exigem a senha do servidor (.htpasswd)', async () => {
-  const semSenhaDoServidor = criarNavegador({ comSenhaDoServidor: false });
-  assert.equal((await semSenhaDoServidor.requisitar('api/sessao.php')).status, 401);
-  assert.equal((await semSenhaDoServidor.requisitar('api/admin/painel.php')).status, 401);
-  assert.equal((await semSenhaDoServidor.requisitar('admin.html')).status, 401);
+test('o painel abre sem a senha do servidor; quem protege é o login do painel', async () => {
+  const visitante = criarNavegador();
+  assert.equal((await visitante.requisitar('admin.html')).status, 200);
+  const sessao = await visitante.requisitar('api/sessao.php');
+  assert.equal(sessao.status, 200);
+  assert.equal(sessao.dados.usuario, null);
+  assert.equal((await visitante.requisitar('api/admin/painel.php')).status, 401);
+  assert.equal((await visitante.requisitar('api/admin/usuarios.php')).status, 401);
 });
 
 test('sem login, a API do painel responde 401', async () => {
@@ -296,7 +296,7 @@ test('o dono redefine a senha e desativa o funcionário, que perde o acesso na h
 test('cria, edita, inativa e exclui um produto; a loja vê cada mudança na hora', async () => {
   const navegador = criarNavegador();
   await navegador.entrar();
-  const loja = criarNavegador({ comSenhaDoServidor: false });
+  const loja = criarNavegador();
   const produtoNaLoja = async (idProduto) =>
     (await loja.requisitar('api/catalogo.php')).dados.produtos.find((produto) => produto.id === idProduto);
 
@@ -346,7 +346,7 @@ test('produto inválido é recusado com a mensagem certa', async () => {
 test('desligar um atendente tira ele do catálogo público na hora', async () => {
   const navegador = criarNavegador();
   await navegador.entrar();
-  const loja = criarNavegador({ comSenhaDoServidor: false });
+  const loja = criarNavegador();
   const contatosDaLoja = async () => (await loja.requisitar('api/catalogo.php')).dados.configuracao.contatosWhatsApp;
   const contatosOriginais = (await navegador.requisitar('api/admin/painel.php')).dados.configuracao.contatosWhatsApp;
 
@@ -412,7 +412,7 @@ test('envia uma foto, gera as versões e entrega pelo endereço fotos/', async (
   assert.equal(envio.status, 201, JSON.stringify(envio.dados));
   assert.match(envio.dados.foto, /^fotos\/[a-f0-9]{32}\.jpg$/);
 
-  const loja = criarNavegador({ comSenhaDoServidor: false });
+  const loja = criarNavegador();
   const jpeg = await loja.requisitar(envio.dados.foto);
   assert.equal(jpeg.status, 200);
   assert.equal(jpeg.resposta.headers.get('content-type'), 'image/jpeg');
@@ -432,7 +432,7 @@ test('recusa arquivo que finge ser foto', async () => {
 });
 
 test('endereço de foto inventado ou com caminho de pasta dá 404', async () => {
-  const loja = criarNavegador({ comSenhaDoServidor: false });
+  const loja = criarNavegador();
   assert.equal((await loja.requisitar(`fotos/${'0'.repeat(32)}.jpg`)).status, 404);
   assert.equal((await loja.requisitar('api/foto.php?arquivo=../config/vivale.php')).status, 404);
 });
@@ -440,7 +440,7 @@ test('endereço de foto inventado ou com caminho de pasta dá 404', async () => 
 // ---------- Arquivos protegidos ----------
 
 test('peças internas e arquivos de desenvolvimento ficam bloqueados', async () => {
-  const loja = criarNavegador({ comSenhaDoServidor: false });
+  const loja = criarNavegador();
   const caminhosBloqueados = [
     'api/nucleo/banco.php',
     'api/sql/001_inicial.sql',
