@@ -9,7 +9,7 @@
 (function (raiz) {
   'use strict';
 
-  const { armazenamento, utilidades, componentes, imagem, contatos, api, estoque } = raiz.Loja;
+  const { armazenamento, utilidades, componentes, imagem, contatos, api, estoque, comprovante } = raiz.Loja;
   const { formatarMoeda, escaparHtml, lerValorMonetario } = utilidades;
 
   const elementos = {};
@@ -799,6 +799,9 @@
     });
     document.getElementById('formulario-nova-venda').addEventListener('submit', finalizarVendaNoBalcao);
     document.getElementById('formulario-vender-pedido').addEventListener('submit', confirmarVendaDoPedido);
+    elementos.janelaComprovante = document.getElementById('janela-comprovante');
+    componentes.configurarJanela(elementos.janelaComprovante);
+    document.getElementById('botao-imprimir-sistema').addEventListener('click', () => raiz.print());
   }
 
   function formatarDataHora(dataDoBanco) {
@@ -847,7 +850,8 @@
     const acoes = {
       pendente: `<button class="botao botao-primario botao-pequeno" type="button" data-acao-pedido="vender">Marcar como vendido</button>
         <button class="botao botao-contorno botao-pequeno" type="button" data-acao-pedido="cancelar">Cancelar</button>`,
-      vendido: `${ehDono() ? '<button class="botao botao-perigo botao-pequeno" type="button" data-acao-pedido="cancelar">Cancelar venda</button>' : ''}`,
+      vendido: `<button class="botao botao-contorno botao-pequeno" type="button" data-acao-pedido="imprimir">Imprimir</button>
+        ${ehDono() ? '<button class="botao botao-perigo botao-pequeno" type="button" data-acao-pedido="cancelar">Cancelar venda</button>' : ''}`,
       cancelado: '',
     }[pedido.situacao];
     return `
@@ -870,7 +874,9 @@
     const pedido = pedidosNaTela.get(Number(botao.closest('[data-id-pedido]').dataset.idPedido));
     if (!pedido) return;
 
-    if (botao.dataset.acaoPedido === 'vender') {
+    if (botao.dataset.acaoPedido === 'imprimir') {
+      abrirComprovante(pedido);
+    } else if (botao.dataset.acaoPedido === 'vender') {
       idPedidoParaVender = pedido.id;
       document.getElementById('formulario-vender-pedido').reset();
       mostrarErroEm('erro-vender-pedido', '');
@@ -929,6 +935,20 @@
 
   function aoConcluirVenda(pedido) {
     componentes.mostrarToast(`Venda nº ${pedido.id} concluída`);
+    abrirComprovante(pedido);
+  }
+
+  /**
+   * Mostra o comprovante e deixa os dois jeitos de imprimir prontos. O do RawBT é um link
+   * porque o Chrome do Android só abre o app a partir de um toque da pessoa.
+   */
+  function abrirComprovante(pedido) {
+    const textoDoComprovante = comprovante.montarTextoDaPrevia(comprovante.montarLinhasDoComprovante(pedido));
+    document.getElementById('titulo-comprovante').textContent = `Comprovante · venda nº ${pedido.id}`;
+    document.getElementById('previa-comprovante').textContent = textoDoComprovante;
+    document.getElementById('area-impressao-comprovante').textContent = textoDoComprovante;
+    document.getElementById('link-imprimir-rawbt').href = comprovante.montarLinkDeImpressaoRawBT(pedido);
+    elementos.janelaComprovante.showModal();
   }
 
   // Nova venda no balcão

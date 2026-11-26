@@ -1961,6 +1961,19 @@ fieldset.campo legend {
   cursor: pointer;
 }
 
+/* Cabeçalho do painel no celular: ícone de estoque e Sair na mesma linha da logo
+   (a logo já leva para a loja, então "Ver loja" sai) */
+.cabecalho .grupo-botoes {
+  flex-wrap: nowrap;
+  align-items: center;
+}
+
+@media (max-width: 479px) {
+  .cabecalho .link-ver-loja {
+    display: none;
+  }
+}
+
 .botao-icone-estoque.com-alerta {
   border-color: var(--cor-destaque);
   color: var(--cor-destaque-realce);
@@ -2120,6 +2133,67 @@ fieldset.campo legend {
   margin: 0 0 10px;
   font-size: 16px;
   text-align: right;
+}
+
+/* Comprovante: mesma largura do papel de 58 mm (32 letras), em fonte de largura fixa */
+.previa-comprovante {
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 auto 12px;
+  padding: 12px;
+  overflow-x: auto;
+  border-radius: var(--raio);
+  background: #ffffff;
+  color: #111111;
+  font-family: 'Courier New', ui-monospace, monospace;
+  font-size: 12px;
+  line-height: 1.35;
+  white-space: pre;
+}
+
+.grupo-botoes-comprovante {
+  display: grid;
+  gap: 8px;
+}
+
+.area-impressao-comprovante {
+  display: none;
+}
+
+/* Impressão pela janela do sistema: só o comprovante, no papel de 58 mm */
+@media print {
+  @page {
+    size: 58mm auto;
+    margin: 0;
+  }
+
+  body {
+    background: #ffffff !important;
+  }
+
+  body * {
+    visibility: hidden;
+  }
+
+  dialog::backdrop {
+    display: none;
+  }
+
+  .area-impressao-comprovante {
+    position: absolute;
+    top: 0;
+    left: 0;
+    display: block;
+    width: 58mm;
+    margin: 0;
+    padding: 2mm;
+    color: #000000;
+    font-family: 'Courier New', monospace;
+    font-size: 9pt;
+    line-height: 1.25;
+    white-space: pre-wrap;
+    visibility: visible;
+  }
 }
 
 .linha-alerta-estoque p {

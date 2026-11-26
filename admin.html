@@ -15,7 +15,7 @@
     <link rel="icon" href="img/marca/favicon.ico" sizes="any" />
     <link rel="icon" type="image/png" href="img/marca/favicon-32.png" sizes="32x32" />
     <link rel="apple-touch-icon" href="img/marca/apple-touch-icon.png" />
-    <link rel="stylesheet" href="css/estilos.css?v=10" />
+    <link rel="stylesheet" href="css/estilos.css?v=13" />
   </head>
   <body>
     <!-- Login (usuário e senha conferidos no servidor) -->
@@ -67,7 +67,7 @@
             </svg>
             <span class="contador-carrinho oculto" id="contador-alertas-estoque"></span>
           </button>
-          <a class="botao botao-contorno botao-pequeno" href="index.html" target="_blank" rel="noopener">Ver loja</a>
+          <a class="botao botao-contorno botao-pequeno link-ver-loja" href="index.html" target="_blank" rel="noopener">Ver loja</a>
           <button class="botao botao-contorno botao-pequeno" id="botao-sair" type="button">Sair</button>
         </div>
       </header>
@@ -455,6 +455,29 @@
       </form>
     </dialog>
 
+    <!-- Comprovante da venda (impressora térmica 58 mm) -->
+    <dialog class="janela" id="janela-comprovante" aria-labelledby="titulo-comprovante">
+      <div class="formulario-janela">
+        <div class="janela-cabecalho">
+          <h2 id="titulo-comprovante">Comprovante</h2>
+          <button class="botao-fechar" type="button" data-fechar aria-label="Fechar">×</button>
+        </div>
+        <div class="janela-corpo">
+          <pre class="previa-comprovante" id="previa-comprovante"></pre>
+          <p class="campo-ajuda">
+            No celular Android: instale o app gratuito <strong>RawBT</strong> (Play Store), pareie a impressora
+            no Bluetooth e escolha ela no RawBT uma vez. Depois é só tocar em "Imprimir no Bluetooth".
+          </p>
+        </div>
+        <div class="janela-rodape grupo-botoes-comprovante">
+          <a class="botao botao-primario botao-largo" id="link-imprimir-rawbt" href="#">Imprimir no Bluetooth (RawBT)</a>
+          <button class="botao botao-contorno botao-largo" id="botao-imprimir-sistema" type="button">Imprimir pela janela do sistema</button>
+        </div>
+      </div>
+    </dialog>
+    <!-- Cópia do comprovante usada só na impressão pela janela do sistema -->
+    <pre class="area-impressao-comprovante" id="area-impressao-comprovante" aria-hidden="true"></pre>
+
     <!-- Itens no estoque mínimo (ícone do cabeçalho) -->
     <dialog class="janela" id="janela-alertas-estoque" aria-labelledby="titulo-alertas-estoque">
       <div class="formulario-janela">
@@ -489,16 +512,17 @@
     </dialog>
 
     <!-- Ordem importa: dados → lógica → telas → página -->
-    <script src="js/dados/dados-iniciais.js?v=10"></script>
-    <script src="js/logica/utilidades.js?v=10"></script>
-    <script src="js/logica/estoque.js?v=10"></script>
-    <script src="js/logica/contatos.js?v=10"></script>
-    <script src="js/logica/armazenamento.js?v=10"></script>
-    <script src="js/logica/api.js?v=10"></script>
-    <script src="js/logica/imagem.js?v=10"></script>
-    <script src="js/telas/componentes.js?v=10"></script>
-    <script src="js/vendor/qrcode-generator.js?v=10"></script>
-    <script src="js/telas/tela-admin.js?v=10"></script>
-    <script src="js/paginas/pagina-admin.js?v=10"></script>
+    <script src="js/dados/dados-iniciais.js?v=13"></script>
+    <script src="js/logica/utilidades.js?v=13"></script>
+    <script src="js/logica/estoque.js?v=13"></script>
+    <script src="js/logica/contatos.js?v=13"></script>
+    <script src="js/logica/armazenamento.js?v=13"></script>
+    <script src="js/logica/api.js?v=13"></script>
+    <script src="js/logica/comprovante.js?v=13"></script>
+    <script src="js/logica/imagem.js?v=13"></script>
+    <script src="js/telas/componentes.js?v=13"></script>
+    <script src="js/vendor/qrcode-generator.js?v=13"></script>
+    <script src="js/telas/tela-admin.js?v=13"></script>
+    <script src="js/paginas/pagina-admin.js?v=13"></script>
   </body>
 </html>
