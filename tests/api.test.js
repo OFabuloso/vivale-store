@@ -96,3 +96,30 @@ test('catálogo vazio do servidor não apaga o catálogo guardado', async () => 
     delete globalThis.Loja;
   }
 });
+
+test('baixa o backup como arquivo, com o nome sugerido pelo servidor', async () => {
+  const fetchOriginal = globalThis.fetch;
+  const arquivoZip = new Blob(['PK'], { type: 'application/zip' });
+  globalThis.fetch = async (caminho, opcoes) => {
+    requisicoesFeitas.push({ caminho, ...opcoes });
+    return {
+      ok: true,
+      status: 200,
+      headers: { get: (nome) => (nome === 'Content-Disposition' ? 'attachment; filename="vivale-backup-2026-11-26-030000.zip"' : null) },
+      blob: async () => arquivoZip,
+    };
+  };
+  try {
+    const resultado = await api.baixarBackup();
+    assert.equal(requisicoesFeitas[0].caminho, 'api/admin/backup.php');
+    assert.equal(resultado.arquivo, arquivoZip);
+    assert.equal(resultado.nomeArquivo, 'vivale-backup-2026-11-26-030000.zip');
+  } finally {
+    globalThis.fetch = fetchOriginal;
+  }
+});
+
+test('erro ao baixar o backup traz a mensagem do servidor', async () => {
+  proximasRespostas = [{ status: 403, dados: { erro: 'Só o dono da loja pode fazer isso.' } }];
+  await assert.rejects(api.baixarBackup(), /Só o dono da loja/);
+});

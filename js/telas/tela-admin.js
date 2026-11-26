@@ -66,6 +66,7 @@
     document.getElementById('formulario-configuracao').addEventListener('submit', salvarConfiguracoes);
     document.getElementById('formulario-senha').addEventListener('submit', trocarSenha);
     document.getElementById('botao-exportar').addEventListener('click', exportarCatalogo);
+    document.getElementById('botao-baixar-backup').addEventListener('click', baixarBackupCompleto);
 
     elementos.listaEquipe = document.getElementById('lista-equipe');
     elementos.janelaSenhaFuncionario = document.getElementById('janela-senha-funcionario');
@@ -191,7 +192,10 @@
     selecionarAba('aba-produtos');
     renderizarProdutos();
     preencherConfiguracoes();
-    if (ehDono()) carregarEquipe();
+    if (ehDono()) {
+      carregarEquipe();
+      mostrarSituacaoDoBackup(dadosDoPainel.backup);
+    }
   }
 
   function ehDono() {
@@ -732,16 +736,47 @@
 
   // ---------- Cópia de segurança ----------
 
-  function exportarCatalogo() {
-    const conteudoArquivo = armazenamento.gerarArquivoDadosIniciais();
-    const arquivo = new Blob([conteudoArquivo], { type: 'text/javascript;charset=utf-8' });
+  /** Faz o navegador salvar o arquivo com o nome indicado. */
+  function salvarArquivoNoComputador(arquivo, nomeArquivo) {
     const link = document.createElement('a');
     link.href = URL.createObjectURL(arquivo);
-    link.download = 'dados-iniciais.js';
+    link.download = nomeArquivo;
     link.click();
     // Pequeno atraso para o navegador iniciar o download antes de liberar a memória
     setTimeout(() => URL.revokeObjectURL(link.href), 1000);
-    componentes.mostrarToast('Cópia de segurança baixada');
+  }
+
+  function exportarCatalogo() {
+    const conteudoArquivo = armazenamento.gerarArquivoDadosIniciais();
+    salvarArquivoNoComputador(new Blob([conteudoArquivo], { type: 'text/javascript;charset=utf-8' }), 'dados-iniciais.js');
+    componentes.mostrarToast('Catálogo baixado');
+  }
+
+  /** Mostra há quanto tempo foi o último backup; em amarelo quando já passou da hora de baixar outro. */
+  function mostrarSituacaoDoBackup(situacao) {
+    const elementoSituacao = document.getElementById('situacao-backup');
+    const { emDia, texto } = utilidades.descreverSituacaoDoBackup(situacao);
+    elementoSituacao.textContent = texto;
+    elementoSituacao.classList.toggle('sucesso', emDia);
+  }
+
+  async function baixarBackupCompleto(evento) {
+    const botaoBaixar = evento.currentTarget;
+    const textoOriginal = botaoBaixar.textContent;
+    botaoBaixar.disabled = true;
+    botaoBaixar.textContent = 'Preparando o backup...';
+    try {
+      const { arquivo, nomeArquivo } = await api.baixarBackup();
+      salvarArquivoNoComputador(arquivo, nomeArquivo);
+      componentes.mostrarToast('Backup baixado. Guarde em lugar seguro.');
+      const situacaoAtual = await api.carregarPainel();
+      mostrarSituacaoDoBackup(situacaoAtual.backup);
+    } catch (erro) {
+      tratarErroDoServidor(erro, (mensagem) => componentes.mostrarToast(mensagem));
+    } finally {
+      botaoBaixar.disabled = false;
+      botaoBaixar.textContent = textoOriginal;
+    }
   }
 
   raiz.Loja.telaAdmin = { iniciar };

@@ -205,6 +205,35 @@
     return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
   }
 
+  // Depois disso o painel lembra o dono de baixar um backup novo
+  const DIAS_PARA_LEMBRAR_BACKUP = 7;
+  const MILISSEGUNDOS_POR_DIA = 24 * 60 * 60 * 1000;
+
+  function descreverDiasAtras(dataIso, agora) {
+    const diasPassados = Math.floor((agora - new Date(dataIso)) / MILISSEGUNDOS_POR_DIA);
+    if (diasPassados <= 0) return 'hoje';
+    if (diasPassados === 1) return 'ontem';
+    return `há ${diasPassados} dias`;
+  }
+
+  /**
+   * Texto do cartão de backup do painel. "emDia" é falso quando o dono nunca baixou um
+   * backup ou baixou há mais de DIAS_PARA_LEMBRAR_BACKUP dias.
+   */
+  function descreverSituacaoDoBackup(situacao, agora = new Date()) {
+    const { ultimoBaixado = null, ultimoAutomatico = null } = situacao || {};
+    const emDia =
+      ultimoBaixado !== null && agora - new Date(ultimoBaixado) <= DIAS_PARA_LEMBRAR_BACKUP * MILISSEGUNDOS_POR_DIA;
+    const textoBaixado = ultimoBaixado
+      ? `Último backup baixado: ${descreverDiasAtras(ultimoBaixado, agora)}.`
+      : 'Você ainda não baixou nenhum backup.';
+    const textoLembrete = emDia ? '' : ' Baixe um agora e guarde fora do servidor.';
+    const textoAutomatico = ultimoAutomatico
+      ? ` Cópia automática no servidor: ${descreverDiasAtras(ultimoAutomatico, agora)}.`
+      : ' A cópia automática diária no servidor ainda não rodou.';
+    return { emDia, texto: textoBaixado + textoLembrete + textoAutomatico };
+  }
+
   const api = {
     paraCentavos,
     formatarMoeda,
@@ -219,6 +248,7 @@
     montarSrcsetDaFoto,
     montarRotuloDoBotaoFiltrar,
     gerarImagemPlaceholder,
+    descreverSituacaoDoBackup,
   };
 
   if (typeof module !== 'undefined' && module.exports) {

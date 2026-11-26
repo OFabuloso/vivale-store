@@ -23,7 +23,7 @@
 
   /** Faz a requisição e devolve o JSON da resposta; lança ErroDaApi com mensagem em português. */
   async function requisitar(caminho, opcoes = {}) {
-    const { metodo = 'GET', corpo, tempoLimiteMs = TEMPO_LIMITE_MS } = opcoes;
+    const { metodo = 'GET', corpo, tempoLimiteMs = TEMPO_LIMITE_MS, comoArquivo = false } = opcoes;
     const cabecalhos = { Accept: 'application/json' };
     if (metodo !== 'GET') cabecalhos['X-CSRF-Token'] = tokenCsrf;
 
@@ -53,13 +53,24 @@
       clearTimeout(temporizador);
     }
 
-    const dados = await resposta.json().catch(() => null);
     if (!resposta.ok) {
-      const mensagem = dados && dados.erro ? dados.erro : 'O servidor não respondeu como esperado.';
+      const dadosDoErro = await resposta.json().catch(() => null);
+      const mensagem = dadosDoErro && dadosDoErro.erro ? dadosDoErro.erro : 'O servidor não respondeu como esperado.';
       throw new ErroDaApi(mensagem, resposta.status);
     }
+    if (comoArquivo) {
+      return { arquivo: await resposta.blob(), nomeArquivo: lerNomeDoArquivo(resposta) };
+    }
+    const dados = await resposta.json().catch(() => null);
     if (dados && dados.tokenCsrf) tokenCsrf = dados.tokenCsrf;
     return dados;
+  }
+
+  /** Nome sugerido pelo servidor no cabeçalho Content-Disposition (ou um nome padrão). */
+  function lerNomeDoArquivo(resposta) {
+    const disposicao = resposta.headers.get('Content-Disposition') || '';
+    const resultado = disposicao.match(/filename="([^"]+)"/);
+    return resultado ? resultado[1] : 'vivale-backup.zip';
   }
 
   // ---------- Loja (sem login) ----------
@@ -130,6 +141,11 @@
   }
 
   /** Envia a foto ao servidor e devolve o endereço dela (ex.: "fotos/<nome>.jpg"). */
+  /** Backup completo (banco + fotos) em .zip. Pode demorar se houver muitas fotos. */
+  function baixarBackup() {
+    return requisitar('api/admin/backup.php', { comoArquivo: true, tempoLimiteMs: 120000 });
+  }
+
   async function enviarFoto(arquivoFoto, nomeArquivo = 'foto.jpg') {
     const formulario = new raiz.FormData();
     formulario.append('foto', arquivoFoto, nomeArquivo);
@@ -171,6 +187,7 @@
     salvarContatos,
     salvarValorMinimo,
     enviarFoto,
+    baixarBackup,
     trocarSenha,
     listarEquipe,
     cadastrarFuncionario,

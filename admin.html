@@ -15,7 +15,7 @@
     <link rel="icon" href="img/marca/favicon.ico" sizes="any" />
     <link rel="icon" type="image/png" href="img/marca/favicon-32.png" sizes="32x32" />
     <link rel="apple-touch-icon" href="img/marca/apple-touch-icon.png" />
-    <link rel="stylesheet" href="css/estilos.css?v=4" />
+    <link rel="stylesheet" href="css/estilos.css?v=5" />
   </head>
   <body>
     <!-- Login (usuário e senha conferidos no servidor) -->
@@ -114,13 +114,19 @@
           <div class="cartao secao-config oculto" data-somente-dono>
             <h2>Cópia de segurança</h2>
             <p>
-              As alterações já valem para as clientes assim que você salva. Este arquivo é uma cópia do
-              catálogo: substituindo <code>js/dados/dados-iniciais.js</code> por ele, a loja continua com o
-              catálogo atualizado mesmo se o servidor ficar fora do ar.
+              O backup completo tem tudo o que a loja guarda no servidor: produtos, atendentes, configurações,
+              equipe e as fotos enviadas. Baixe uma vez por semana e guarde fora do servidor (no computador e no
+              Google Drive, por exemplo). As instruções para restaurar vão dentro do arquivo.
             </p>
+            <p class="aviso" id="situacao-backup" role="status"></p>
             <div class="grupo-botoes">
-              <button class="botao botao-contorno" id="botao-exportar" type="button">Baixar cópia de segurança</button>
+              <button class="botao botao-primario" id="botao-baixar-backup" type="button">Baixar backup completo</button>
+              <button class="botao botao-contorno" id="botao-exportar" type="button">Baixar só o catálogo</button>
             </div>
+            <p class="campo-ajuda">
+              "Só o catálogo" gera o <code>js/dados/dados-iniciais.js</code>, usado pela loja se o servidor
+              ficar fora do ar.
+            </p>
           </div>
         </section>
 
@@ -248,14 +254,14 @@
     </dialog>
 
     <!-- Ordem importa: dados → lógica → telas → página -->
-    <script src="js/dados/dados-iniciais.js?v=4"></script>
-    <script src="js/logica/utilidades.js?v=4"></script>
-    <script src="js/logica/contatos.js?v=4"></script>
-    <script src="js/logica/armazenamento.js?v=4"></script>
-    <script src="js/logica/api.js?v=4"></script>
-    <script src="js/logica/imagem.js?v=4"></script>
-    <script src="js/telas/componentes.js?v=4"></script>
-    <script src="js/telas/tela-admin.js?v=4"></script>
-    <script src="js/paginas/pagina-admin.js?v=4"></script>
+    <script src="js/dados/dados-iniciais.js?v=5"></script>
+    <script src="js/logica/utilidades.js?v=5"></script>
+    <script src="js/logica/contatos.js?v=5"></script>
+    <script src="js/logica/armazenamento.js?v=5"></script>
+    <script src="js/logica/api.js?v=5"></script>
+    <script src="js/logica/imagem.js?v=5"></script>
+    <script src="js/telas/componentes.js?v=5"></script>
+    <script src="js/telas/tela-admin.js?v=5"></script>
+    <script src="js/paginas/pagina-admin.js?v=5"></script>
   </body>
 </html>

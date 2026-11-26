@@ -6,6 +6,7 @@ const {
   obterFundoDaCor,
   montarSrcsetDaFoto,
   montarRotuloDoBotaoFiltrar,
+  descreverSituacaoDoBackup,
 } = require('../js/logica/utilidades.js');
 
 const COR_NEUTRA = '#cbbfb4';
@@ -84,4 +85,26 @@ test('foto sem versões otimizadas não gera srcset', () => {
   assert.equal(montarSrcsetDaFoto('img/produtos/com espaço.jpeg'), '');
   assert.equal(montarSrcsetDaFoto(''), '');
   assert.equal(montarSrcsetDaFoto(undefined), '');
+});
+
+test('backup nunca baixado pede para baixar agora', () => {
+  const situacao = descreverSituacaoDoBackup({ ultimoBaixado: null, ultimoAutomatico: null });
+  assert.equal(situacao.emDia, false);
+  assert.match(situacao.texto, /ainda não baixou nenhum backup/);
+  assert.match(situacao.texto, /Baixe um agora/);
+  assert.match(situacao.texto, /ainda não rodou/);
+});
+
+test('backup baixado há poucos dias está em dia; depois de 7 dias volta o lembrete', () => {
+  const agora = new Date('2026-11-26T12:00:00-03:00');
+  const recente = descreverSituacaoDoBackup(
+    { ultimoBaixado: '2026-11-23T10:00:00-03:00', ultimoAutomatico: '2026-11-26T03:00:00-03:00' },
+    agora,
+  );
+  assert.equal(recente.emDia, true);
+  assert.equal(recente.texto, 'Último backup baixado: há 3 dias. Cópia automática no servidor: hoje.');
+
+  const antigo = descreverSituacaoDoBackup({ ultimoBaixado: '2026-11-17T10:00:00-03:00' }, agora);
+  assert.equal(antigo.emDia, false);
+  assert.match(antigo.texto, /há 9 dias\. Baixe um agora/);
 });

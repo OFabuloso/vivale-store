@@ -11,6 +11,8 @@ const { test, before, beforeEach } = require('node:test');
 const assert = require('node:assert/strict');
 const { execFileSync } = require('node:child_process');
 const path = require('node:path');
+const fs = require('node:fs');
+const os = require('node:os');
 const sharp = require('sharp');
 
 const ENDERECO_BASE = process.env.ENDERECO_API || 'http://localhost:8081';
@@ -447,8 +449,102 @@ test('peças internas e arquivos de desenvolvimento ficam bloqueados', async () 
     'docker-compose.yml',
     'tests-api/backend.test.js',
     'ferramentas/criar-usuario.php',
+    'ferramentas/backup.php',
+    'api/nucleo/backup.php',
   ];
   for (const caminho of caminhosBloqueados) {
     assert.equal((await loja.requisitar(caminho)).status, 403, caminho);
   }
+});
+
+// ---------- Backup ----------
+
+const USUARIO_FUNCIONARIO_BACKUP = 'teste-func-backup';
+const PASTA_DE_BACKUPS_NO_DOCKER = '/home/u151095779/domains/vivalestore.com.br/backups';
+
+function contarLinhas(tabela, banco = 'vivale') {
+  const sql = `SELECT COUNT(*) FROM ${banco}.${tabela}`;
+  return Number(rodarNoDocker('banco', ['mariadb', '-uroot', '-pvivale-root-local', '-N', '-e', sql]).trim());
+}
+
+test('só o dono baixa o backup; o funcionário é recusado', async () => {
+  rodarNoDocker('web', ['php', 'ferramentas/criar-usuario.php', USUARIO_FUNCIONARIO_BACKUP, 'Funcionário Backup'], `${SENHA_TESTE}\n`);
+  rodarSql(`UPDATE usuarios SET papel = 'funcionario' WHERE usuario = '${USUARIO_FUNCIONARIO_BACKUP}'`);
+  const funcionario = criarNavegador();
+  await funcionario.entrar(USUARIO_FUNCIONARIO_BACKUP, SENHA_TESTE);
+  assert.equal((await funcionario.requisitar('api/admin/backup.php')).status, 403);
+  assert.equal((await funcionario.requisitar('api/admin/painel.php')).dados.backup, undefined);
+
+  const semLogin = criarNavegador();
+  assert.equal((await semLogin.requisitar('api/admin/backup.php')).status, 401);
+});
+
+test('o backup baixado tem banco e fotos, e restaurar o banco.sql recria tudo', async () => {
+  const dono = criarNavegador();
+  await dono.entrar();
+  const formulario = new FormData();
+  formulario.append('foto', new Blob([await criarPngPequeno()], { type: 'image/png' }), 'foto.png');
+  const fotoEnviada = (await dono.requisitar('api/admin/fotos.php', { metodo: 'POST', corpo: formulario })).dados.foto;
+  const nomeDaFoto = fotoEnviada.replace('fotos/', '');
+  // Contagens antes do download: baixar também anota a data e registra a ação no banco
+  const TABELAS_CONFERIDAS = ['produtos', 'contatos', 'configuracoes', 'usuarios', 'auditoria'];
+  const linhasAntesDoBackup = Object.fromEntries(TABELAS_CONFERIDAS.map((tabela) => [tabela, contarLinhas(tabela)]));
+
+  const download = await dono.requisitar('api/admin/backup.php');
+  assert.equal(download.status, 200);
+  assert.equal(download.resposta.headers.get('content-type'), 'application/zip');
+  assert.match(download.resposta.headers.get('content-disposition'), /filename="vivale-backup-\d{4}-\d{2}-\d{2}-\d{6}\.zip"/);
+
+  const pastaTemporaria = fs.mkdtempSync(path.join(os.tmpdir(), 'vivale-backup-'));
+  try {
+    const caminhoZip = path.join(pastaTemporaria, 'backup.zip');
+    fs.writeFileSync(caminhoZip, Buffer.from(await download.resposta.arrayBuffer()));
+    const conteudoDoZip = execFileSync('unzip', ['-Z1', caminhoZip], { encoding: 'utf8' }).split('\n');
+    assert.ok(conteudoDoZip.includes('banco.sql'));
+    assert.ok(conteudoDoZip.includes('LEIA-ME.txt'));
+    assert.ok(conteudoDoZip.includes(`fotos/${nomeDaFoto}`));
+    assert.ok(conteudoDoZip.includes(`fotos/${nomeDaFoto.replace('.jpg', '-400.webp')}`));
+
+    // Restaura num banco vazio e confere se ficou igual ao original
+    const bancoSql = execFileSync('unzip', ['-p', caminhoZip, 'banco.sql'], { encoding: 'utf8' });
+    assert.doesNotMatch(bancoSql, /INSERT INTO `tentativas_login`/);
+    const comandoRoot = ['mariadb', '-uroot', '-pvivale-root-local'];
+    rodarNoDocker('banco', [...comandoRoot, '-e', 'DROP DATABASE IF EXISTS vivale_restaurado; CREATE DATABASE vivale_restaurado']);
+    try {
+      rodarNoDocker('banco', [...comandoRoot, 'vivale_restaurado'], bancoSql);
+      for (const tabela of TABELAS_CONFERIDAS) {
+        assert.equal(contarLinhas(tabela, 'vivale_restaurado'), linhasAntesDoBackup[tabela], tabela);
+      }
+      const nomesOriginais = rodarSql('SELECT nome FROM produtos ORDER BY id');
+      const nomesRestaurados = rodarNoDocker('banco', [...comandoRoot, '-N', '-e', 'SELECT nome FROM vivale_restaurado.produtos ORDER BY id']);
+      assert.equal(nomesRestaurados, nomesOriginais);
+    } finally {
+      rodarNoDocker('banco', [...comandoRoot, '-e', 'DROP DATABASE IF EXISTS vivale_restaurado']);
+    }
+  } finally {
+    fs.rmSync(pastaTemporaria, { recursive: true, force: true });
+  }
+
+  const situacao = (await dono.requisitar('api/admin/painel.php')).dados.backup;
+  assert.ok(situacao.ultimoBaixado, 'o painel deveria mostrar a data do último backup baixado');
+  assert.ok(Date.now() - new Date(situacao.ultimoBaixado) < 60_000);
+});
+
+test('a cópia automática cria o backup no servidor e guarda só os 14 mais recentes', async () => {
+  // 16 backups antigos de mentira: depois de rodar, sobram os 13 mais novos deles + o de hoje
+  rodarNoDocker('web', ['sh', '-c', `mkdir -p ${PASTA_DE_BACKUPS_NO_DOCKER} && rm -f ${PASTA_DE_BACKUPS_NO_DOCKER}/*.zip && for dia in 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16; do touch ${PASTA_DE_BACKUPS_NO_DOCKER}/vivale-backup-2000-01-$dia-030000.zip; done`]);
+
+  const saida = rodarNoDocker('web', ['php', 'ferramentas/backup.php']);
+  assert.match(saida, /Backup criado: .*vivale-backup-\d{4}-\d{2}-\d{2}-\d{6}\.zip/);
+
+  const backupsGuardados = rodarNoDocker('web', ['sh', '-c', `ls ${PASTA_DE_BACKUPS_NO_DOCKER}`]).trim().split('\n');
+  assert.equal(backupsGuardados.length, 14);
+  assert.ok(!backupsGuardados.includes('vivale-backup-2000-01-01-030000.zip'), 'o mais antigo deveria ter sido apagado');
+  assert.ok(!backupsGuardados.includes('vivale-backup-2000-01-03-030000.zip'));
+  assert.ok(backupsGuardados.includes('vivale-backup-2000-01-04-030000.zip'));
+
+  const dono = criarNavegador();
+  await dono.entrar();
+  assert.ok((await dono.requisitar('api/admin/painel.php')).dados.backup.ultimoAutomatico);
+  rodarNoDocker('web', ['sh', '-c', `rm -f ${PASTA_DE_BACKUPS_NO_DOCKER}/*.zip`]);
 });
