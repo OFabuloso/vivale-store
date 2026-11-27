@@ -2112,6 +2112,43 @@ fieldset.campo legend {
   margin-left: auto;
 }
 
+.lista-registro {
+  display: grid;
+  gap: 2px;
+  margin: 8px 0 12px;
+}
+
+.linha-registro {
+  display: grid;
+  grid-template-columns: 118px 1fr;
+  gap: 10px;
+  padding: 8px 4px;
+  border-bottom: 1px solid var(--cor-borda);
+  font-size: 13px;
+}
+
+.linha-registro p {
+  margin: 0;
+}
+
+.linha-registro small,
+.data-registro {
+  color: var(--cor-texto-suave);
+  font-size: 12px;
+}
+
+.linha-registro small {
+  display: block;
+  margin-top: 2px;
+}
+
+@media (max-width: 479px) {
+  .linha-registro {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+}
+
 .status-na-equipe {
   display: inline-flex;
   align-items: center;

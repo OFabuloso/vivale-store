@@ -1036,3 +1036,42 @@ test('entrar deixa online, a pessoa troca o status e sair deixa offline; o dono 
     rodarSql(`UPDATE usuarios SET ativo = 0 WHERE usuario = '${usuarioDoTeste}'`);
   }
 });
+
+// ---------- Registro de ações ----------
+
+test('só o dono vê o registro de ações, com filtros e páginas que não repetem registros', async () => {
+  const usuarioDoTeste = 'teste-registro';
+  criarUsuarioDeTeste(usuarioDoTeste, 'funcionario');
+  const funcionario = criarNavegador();
+  await funcionario.entrar(usuarioDoTeste, SENHA_TESTE);
+  const dono = criarNavegador();
+  await dono.entrar();
+  try {
+    assert.equal((await funcionario.requisitar('api/admin/auditoria.php')).status, 403);
+
+    const idDoFuncionario = Number(rodarSql(`SELECT id FROM usuarios WHERE usuario = '${usuarioDoTeste}'`).trim());
+    const doFuncionario = await dono.requisitar(`api/admin/auditoria.php?usuario=${idDoFuncionario}&acoes=login`);
+    assert.equal(doFuncionario.status, 200);
+    assert.ok(doFuncionario.dados.registros.length >= 1);
+    assert.ok(doFuncionario.dados.registros.every((item) => item.acao === 'login' && item.usuario.id === idDoFuncionario));
+
+    // Páginas de 50: a segunda começa logo depois da última da primeira
+    for (let repeticao = 0; repeticao < 55; repeticao++) {
+      rodarSql(`INSERT INTO auditoria (usuario_id, acao, detalhes, ip) VALUES (${idDoFuncionario}, 'status_alterado', '{"status":"pausa"}', '127.0.0.1')`);
+    }
+    const primeiraPagina = (await dono.requisitar(`api/admin/auditoria.php?usuario=${idDoFuncionario}`)).dados;
+    assert.equal(primeiraPagina.registros.length, 50);
+    assert.equal(primeiraPagina.temMais, true);
+    const ultimoId = primeiraPagina.registros.at(-1).id;
+    const segundaPagina = (await dono.requisitar(`api/admin/auditoria.php?usuario=${idDoFuncionario}&antesDe=${ultimoId}`)).dados;
+    assert.ok(segundaPagina.registros.length >= 5);
+    assert.ok(segundaPagina.registros.every((item) => item.id < ultimoId));
+    assert.deepEqual(segundaPagina.registros[0].detalhes, { status: 'pausa' });
+
+    const filtroInvalido = await dono.requisitar("api/admin/auditoria.php?acoes=login'--&usuario=abc");
+    assert.equal(filtroInvalido.status, 200, 'filtro inválido é ignorado, sem erro');
+  } finally {
+    rodarSql(`DELETE auditoria FROM auditoria JOIN usuarios ON usuarios.id = auditoria.usuario_id WHERE usuarios.usuario = '${usuarioDoTeste}'`);
+    rodarSql(`UPDATE usuarios SET ativo = 0 WHERE usuario = '${usuarioDoTeste}'`);
+  }
+});

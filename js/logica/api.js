@@ -196,6 +196,18 @@
     return requisitar('api/admin/status.php', { metodo: 'POST', corpo: { status, automatico } });
   }
 
+  // ---------- Registro de ações (só o dono) ----------
+
+  /** filtros: { antesDe, usuario, acoes: [...] }. Devolve { registros, temMais }. */
+  function listarRegistro({ antesDe, usuario, acoes = [] } = {}) {
+    const parametros = new URLSearchParams();
+    if (antesDe) parametros.set('antesDe', String(antesDe));
+    if (usuario) parametros.set('usuario', String(usuario));
+    if (acoes.length) parametros.set('acoes', acoes.join(','));
+    const busca = parametros.toString();
+    return requisitar(`api/admin/auditoria.php${busca ? `?${busca}` : ''}`);
+  }
+
   // ---------- Vendas ----------
 
   /** Pedidos de uma situação (pendente, vendido ou cancelado) e quantos estão pendentes. */
@@ -283,6 +295,7 @@
     alterarFuncionario,
     obterDoisFatores,
     obterStatus,
+    listarRegistro,
     alterarStatus,
     listarPedidos,
     venderPedido,

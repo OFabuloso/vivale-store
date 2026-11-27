@@ -9,7 +9,7 @@
 (function (raiz) {
   'use strict';
 
-  const { armazenamento, utilidades, componentes, imagem, contatos, api, estoque, comprovante } = raiz.Loja;
+  const { armazenamento, utilidades, componentes, imagem, contatos, api, estoque, comprovante, registro } = raiz.Loja;
   const { formatarMoeda, escaparHtml, lerValorMonetario } = utilidades;
 
   const elementos = {};
@@ -68,6 +68,7 @@
     configurarDoisFatores();
     configurarVendas();
     configurarMenuDoUsuario();
+    configurarRegistro();
     document.getElementById('botao-sair').addEventListener('click', sair);
     document.querySelectorAll('.aba').forEach((aba) => aba.addEventListener('click', trocarAba));
 
@@ -260,7 +261,10 @@
     const idAba = evento.currentTarget.dataset.aba;
     selecionarAba(idAba);
     // Status da equipe e pedidos novos mudam com o painel aberto: atualiza ao abrir a aba
-    if (idAba === 'aba-equipe' && ehDono()) carregarEquipe();
+    if (idAba === 'aba-equipe' && ehDono()) {
+      carregarEquipe();
+      carregarRegistro();
+    }
     if (idAba === 'aba-vendas') carregarPedidos();
   }
 
@@ -1408,6 +1412,64 @@
 
   function renderizarEquipe(usuarios) {
     elementos.listaEquipe.innerHTML = usuarios.map(montarHtmlLinhaFuncionario).join('');
+    preencherPessoasDoRegistro(usuarios);
+  }
+
+  // ---------- Registro de ações (só o dono) ----------
+
+  let ultimoRegistroNaTela = null;
+
+  function configurarRegistro() {
+    document.getElementById('registro-tipo').innerHTML +=
+      Object.entries(registro.GRUPOS_DE_ACOES)
+        .map(([grupo, { rotulo }]) => `<option value="${escaparHtml(grupo)}">${escaparHtml(rotulo)}</option>`)
+        .join('');
+    document.getElementById('registro-pessoa').addEventListener('change', () => carregarRegistro());
+    document.getElementById('registro-tipo').addEventListener('change', () => carregarRegistro());
+    document.getElementById('botao-mais-registros').addEventListener('click', () => carregarRegistro(true));
+  }
+
+  /** Mantém a pessoa escolhida ao atualizar a lista da equipe. */
+  function preencherPessoasDoRegistro(usuarios) {
+    const seletor = document.getElementById('registro-pessoa');
+    const escolhida = seletor.value;
+    seletor.innerHTML =
+      '<option value="">Todas</option>' +
+      usuarios.map((usuario) => `<option value="${usuario.id}">${escaparHtml(usuario.nome)}</option>`).join('');
+    seletor.value = escolhida;
+  }
+
+  async function carregarRegistro(continuar = false) {
+    const lista = document.getElementById('lista-registro');
+    const botaoMais = document.getElementById('botao-mais-registros');
+    botaoMais.disabled = true;
+    try {
+      const { registros, temMais } = await api.listarRegistro({
+        antesDe: continuar ? ultimoRegistroNaTela : null,
+        usuario: document.getElementById('registro-pessoa').value,
+        acoes: registro.listarAcoesDoGrupo(document.getElementById('registro-tipo').value),
+      });
+      const linhas = registros.map(montarHtmlLinhaRegistro).join('');
+      lista.innerHTML = continuar ? lista.innerHTML + linhas : linhas || '<p class="estado-vazio">Nenhuma ação encontrada.</p>';
+      if (registros.length) ultimoRegistroNaTela = registros[registros.length - 1].id;
+      botaoMais.classList.toggle('oculto', !temMais);
+    } catch (erro) {
+      tratarErroDoServidor(erro, (mensagem) => {
+        lista.innerHTML = `<p class="mensagem-erro">${escaparHtml(mensagem)}</p>`;
+      });
+    } finally {
+      botaoMais.disabled = false;
+    }
+  }
+
+  function montarHtmlLinhaRegistro(itemDoRegistro) {
+    const quem = itemDoRegistro.usuario ? itemDoRegistro.usuario.nome : 'Usuário removido';
+    return `
+      <div class="linha-registro">
+        <span class="data-registro">${escaparHtml(formatarDataHora(itemDoRegistro.criadoEm))}</span>
+        <p><strong>${escaparHtml(quem)}</strong> · ${escaparHtml(registro.descreverAcao(itemDoRegistro))}
+          <small title="Endereço de onde a ação foi feita">IP ${escaparHtml(itemDoRegistro.ip)}</small></p>
+      </div>`;
   }
 
   function montarHtmlLinhaFuncionario(usuario) {

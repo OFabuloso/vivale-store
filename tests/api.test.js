@@ -186,3 +186,10 @@ test('troca de status vai para o endpoint de status, marcando quando é automát
   assert.deepEqual(JSON.parse(requisicoesFeitas[0].body), { status: 'pausa', automatico: false });
   assert.deepEqual(JSON.parse(requisicoesFeitas[1].body), { status: 'ausente', automatico: true });
 });
+
+test('o registro de ações vai com os filtros na URL', async () => {
+  await api.listarRegistro();
+  await api.listarRegistro({ antesDe: 120, usuario: 3, acoes: ['login', 'logout'] });
+  assert.equal(requisicoesFeitas[0].caminho, 'api/admin/auditoria.php');
+  assert.equal(requisicoesFeitas[1].caminho, 'api/admin/auditoria.php?antesDe=120&usuario=3&acoes=login%2Clogout');
+});

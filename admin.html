@@ -15,7 +15,7 @@
     <link rel="icon" href="img/marca/favicon.ico" sizes="any" />
     <link rel="icon" type="image/png" href="img/marca/favicon-32.png" sizes="32x32" />
     <link rel="apple-touch-icon" href="img/marca/apple-touch-icon.png" />
-    <link rel="stylesheet" href="css/estilos.css?v=16" />
+    <link rel="stylesheet" href="css/estilos.css?v=17" />
   </head>
   <body>
     <!-- Login (usuário e senha conferidos no servidor) -->
@@ -315,6 +315,23 @@
             <p>Funcionário desativado perde o acesso na hora. Você pode reativá-lo depois.</p>
             <div class="lista-contatos-admin" id="lista-equipe"></div>
           </div>
+
+          <div class="cartao secao-config">
+            <h2>Registro de ações</h2>
+            <p>Quem fez o quê no painel, do mais recente ao mais antigo.</p>
+            <div class="linha-campos">
+              <div class="campo">
+                <label for="registro-pessoa">Pessoa</label>
+                <select id="registro-pessoa"><option value="">Todas</option></select>
+              </div>
+              <div class="campo">
+                <label for="registro-tipo">Tipo</label>
+                <select id="registro-tipo"><option value="">Todos</option></select>
+              </div>
+            </div>
+            <div class="lista-registro" id="lista-registro"></div>
+            <button class="botao botao-contorno botao-largo oculto" id="botao-mais-registros" type="button">Carregar mais</button>
+          </div>
         </section>
       </main>
     </div>
@@ -541,17 +558,18 @@
     </dialog>
 
     <!-- Ordem importa: dados → lógica → telas → página -->
-    <script src="js/dados/dados-iniciais.js?v=16"></script>
-    <script src="js/logica/utilidades.js?v=16"></script>
-    <script src="js/logica/estoque.js?v=16"></script>
-    <script src="js/logica/contatos.js?v=16"></script>
-    <script src="js/logica/armazenamento.js?v=16"></script>
-    <script src="js/logica/api.js?v=16"></script>
-    <script src="js/logica/comprovante.js?v=16"></script>
-    <script src="js/logica/imagem.js?v=16"></script>
-    <script src="js/telas/componentes.js?v=16"></script>
-    <script src="js/vendor/qrcode-generator.js?v=16"></script>
-    <script src="js/telas/tela-admin.js?v=16"></script>
-    <script src="js/paginas/pagina-admin.js?v=16"></script>
+    <script src="js/dados/dados-iniciais.js?v=17"></script>
+    <script src="js/logica/utilidades.js?v=17"></script>
+    <script src="js/logica/estoque.js?v=17"></script>
+    <script src="js/logica/contatos.js?v=17"></script>
+    <script src="js/logica/armazenamento.js?v=17"></script>
+    <script src="js/logica/api.js?v=17"></script>
+    <script src="js/logica/comprovante.js?v=17"></script>
+    <script src="js/logica/registro.js?v=17"></script>
+    <script src="js/logica/imagem.js?v=17"></script>
+    <script src="js/telas/componentes.js?v=17"></script>
+    <script src="js/vendor/qrcode-generator.js?v=17"></script>
+    <script src="js/telas/tela-admin.js?v=17"></script>
+    <script src="js/paginas/pagina-admin.js?v=17"></script>
   </body>
 </html>
