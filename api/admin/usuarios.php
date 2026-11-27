@@ -17,7 +17,8 @@ const TAMANHO_MINIMO_SENHA_FUNCIONARIO = 10;
 function listarUsuarios(): array
 {
     $usuarios = executarConsulta(
-        'SELECT id, usuario, nome, papel, ativo, ultimo_acesso, totp_segredo IS NOT NULL AS dois_fatores
+        'SELECT id, usuario, nome, papel, ativo, ultimo_acesso, totp_segredo IS NOT NULL AS dois_fatores,
+                status, status_desde, visto_em, ' . sqlDoStatusEfetivo() . ' AS status_efetivo
          FROM usuarios ORDER BY papel = ?, nome',
         [PAPEL_FUNCIONARIO],
     )->fetchAll();
@@ -29,7 +30,7 @@ function listarUsuarios(): array
         'ativo' => (bool) $usuario['ativo'],
         'ultimoAcesso' => $usuario['ultimo_acesso'],
         'doisFatores' => (bool) $usuario['dois_fatores'],
-    ], $usuarios);
+    ] + montarStatusParaOPainel($usuario), $usuarios);
 }
 
 function validarSenhaDoFuncionario(mixed $senha): string

@@ -8,6 +8,8 @@ const {
   montarRotuloDoBotaoFiltrar,
   descreverSituacaoDoBackup,
   rotularTamanho,
+  rotularStatus,
+  obterIniciais,
 } = require('../js/logica/utilidades.js');
 
 const COR_NEUTRA = '#cbbfb4';
@@ -113,4 +115,16 @@ test('backup baixado há poucos dias está em dia; depois de 7 dias volta o lemb
 test('tamanho único aparece como "Único"; os outros ficam como estão', () => {
   assert.equal(rotularTamanho('U'), 'Único');
   assert.equal(rotularTamanho('GG'), 'GG');
+});
+
+test('status da equipe com nome em português; desconhecido conta como offline', () => {
+  assert.equal(rotularStatus('pausa'), 'Pausa');
+  assert.equal(rotularStatus('qualquer'), 'Offline');
+});
+
+test('iniciais do usuário para o círculo do cabeçalho', () => {
+  assert.equal(obterIniciais('Ana Souza'), 'AS');
+  assert.equal(obterIniciais('Maria da Silva Costa'), 'MC');
+  assert.equal(obterIniciais('dono'), 'D');
+  assert.equal(obterIniciais(''), '?');
 });

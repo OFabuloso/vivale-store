@@ -31,6 +31,7 @@ switch (metodoDaRequisicao()) {
         exigirTokenCsrf();
         $usuario = obterUsuarioLogado();
         if ($usuario !== null) {
+            definirStatus((int) $usuario['id'], 'offline');
             registrarAuditoria((int) $usuario['id'], 'logout');
         }
         encerrarSessao();

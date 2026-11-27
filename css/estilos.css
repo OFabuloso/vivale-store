@@ -1974,6 +1974,165 @@ fieldset.campo legend {
   }
 }
 
+/* ---------- Usuário e status ---------- */
+
+.menu-usuario {
+  position: relative;
+}
+
+.botao-usuario {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 220px;
+  padding: 3px 12px 3px 3px;
+  border: 1px solid var(--cor-borda);
+  border-radius: 999px;
+  background: var(--cor-superficie);
+  color: var(--cor-texto);
+  cursor: pointer;
+}
+
+.botao-usuario[aria-expanded='true'] {
+  border-color: var(--cor-destaque);
+}
+
+.avatar-usuario {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--gradiente-dourado);
+  color: var(--cor-sobre-destaque);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.avatar-usuario .bolinha-status {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  border: 2px solid var(--cor-superficie);
+}
+
+.nome-usuario {
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Cores do status: verde online, dourado pausa, laranja ausente, cinza offline */
+.bolinha-status {
+  display: inline-block;
+  flex-shrink: 0;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: #6b6760;
+}
+
+.bolinha-status[data-status='online'] {
+  background: var(--cor-sucesso);
+}
+
+.bolinha-status[data-status='pausa'] {
+  background: var(--cor-destaque);
+}
+
+.bolinha-status[data-status='ausente'] {
+  background: #e8955a;
+}
+
+.opcoes-menu-usuario {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 30;
+  min-width: 210px;
+  padding: 6px;
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-painel);
+  background: var(--cor-superficie-elevada);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+}
+
+.cabecalho-menu-usuario {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 8px 10px 10px;
+  border-bottom: 1px solid var(--cor-borda);
+}
+
+.cabecalho-menu-usuario span {
+  color: var(--cor-texto-suave);
+  font-size: 12px;
+}
+
+.opcoes-menu-usuario hr {
+  margin: 6px 0;
+  border: 0;
+  border-top: 1px solid var(--cor-borda);
+}
+
+.opcao-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 40px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--raio);
+  background: transparent;
+  color: var(--cor-texto);
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.opcao-status:hover,
+.opcao-status:focus-visible {
+  background: var(--cor-destaque-claro);
+}
+
+.opcao-status[aria-checked='true'] {
+  color: var(--cor-destaque-realce);
+  font-weight: 600;
+}
+
+.opcao-status[aria-checked='true']::after {
+  content: '✓';
+  margin-left: auto;
+}
+
+.status-na-equipe {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 6px;
+  color: var(--cor-texto-suave);
+  font-size: 12px;
+  vertical-align: middle;
+}
+
+/* No celular, só o círculo com as iniciais (o nome aparece ao abrir o menu) */
+@media (max-width: 479px) {
+  .nome-usuario {
+    display: none;
+  }
+
+  .botao-usuario {
+    padding: 3px;
+  }
+}
+
 .botao-icone-estoque.com-alerta {
   border-color: var(--cor-destaque);
   color: var(--cor-destaque-realce);

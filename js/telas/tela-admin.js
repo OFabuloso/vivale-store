@@ -67,6 +67,7 @@
     document.getElementById('botao-voltar-login').addEventListener('click', () => mostrarLogin());
     configurarDoisFatores();
     configurarVendas();
+    configurarMenuDoUsuario();
     document.getElementById('botao-sair').addEventListener('click', sair);
     document.querySelectorAll('.aba').forEach((aba) => aba.addEventListener('click', trocarAba));
 
@@ -164,6 +165,8 @@
   }
 
   function mostrarLogin(mensagem = '') {
+    // Sessão expirada ou saída: para de mandar status e sinais
+    pararStatus();
     elementos.painel.classList.add('oculto');
     elementos.telaLogin.classList.remove('oculto');
     document.getElementById('formulario-login').classList.remove('oculto');
@@ -203,6 +206,7 @@
   }
 
   async function sair() {
+    pararStatus();
     try {
       await api.sair();
     } catch (erro) {
@@ -216,6 +220,7 @@
     const dadosDoPainel = await api.carregarPainel();
     armazenamento.aplicarCatalogoDoServidor(dadosDoPainel);
     usuarioLogado = dadosDoPainel.usuario;
+    iniciarStatus(usuarioLogado.status);
     elementos.telaLogin.classList.add('oculto');
     elementos.painel.classList.remove('oculto');
     aplicarPermissoes();
@@ -252,7 +257,11 @@
   }
 
   function trocarAba(evento) {
-    selecionarAba(evento.currentTarget.dataset.aba);
+    const idAba = evento.currentTarget.dataset.aba;
+    selecionarAba(idAba);
+    // Status da equipe e pedidos novos mudam com o painel aberto: atualiza ao abrir a aba
+    if (idAba === 'aba-equipe' && ehDono()) carregarEquipe();
+    if (idAba === 'aba-vendas') carregarPedidos();
   }
 
   function selecionarAba(idAba) {
@@ -766,6 +775,136 @@
       tratarErroDoServidor(erro, mostrarErro);
     } finally {
       botaoSalvar.disabled = false;
+    }
+  }
+
+  // ---------- Usuário e status (canto superior) ----------
+
+  const MINUTOS_PARADO_PARA_AUSENTE = 10;
+  // O painel avisa o servidor que continua aberto; sem aviso por 10 min, a pessoa aparece offline
+  const MINUTOS_ENTRE_SINAIS = 4;
+  const MILISSEGUNDOS_POR_MINUTO = 60 * 1000;
+
+  let statusAtual = 'offline';
+  let ficouAusenteSozinho = false;
+  let ultimaAtividade = Date.now();
+  let temporizadorDeInatividade = null;
+  let temporizadorDeSinal = null;
+
+  function configurarMenuDoUsuario() {
+    const botaoUsuario = document.getElementById('botao-usuario');
+    botaoUsuario.addEventListener('click', () => alternarMenuDoUsuario());
+    document.getElementById('opcoes-menu-usuario').addEventListener('click', (evento) => {
+      const opcao = evento.target.closest('[data-status]');
+      if (!opcao) return;
+      alternarMenuDoUsuario(false);
+      escolherStatus(opcao.dataset.status);
+    });
+    // Fecha o menu ao clicar fora ou apertar Esc
+    document.addEventListener('click', (evento) => {
+      if (!evento.target.closest('.menu-usuario')) alternarMenuDoUsuario(false);
+    });
+    document.addEventListener('keydown', (evento) => {
+      if (evento.key === 'Escape') alternarMenuDoUsuario(false);
+    });
+    ['pointerdown', 'keydown', 'scroll', 'mousemove', 'touchstart'].forEach((tipoDeEvento) => {
+      raiz.addEventListener(tipoDeEvento, registrarAtividade, { passive: true, capture: true });
+    });
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && usuarioLogado) enviarSinalDoPainel();
+    });
+  }
+
+  function alternarMenuDoUsuario(abrir) {
+    const menu = document.getElementById('opcoes-menu-usuario');
+    const deveAbrir = abrir ?? menu.classList.contains('oculto');
+    menu.classList.toggle('oculto', !deveAbrir);
+    document.getElementById('botao-usuario').setAttribute('aria-expanded', String(deveAbrir));
+  }
+
+  /** Nome, iniciais e bolinha do status no cabeçalho e no menu. */
+  function mostrarUsuarioNoCabecalho() {
+    if (!usuarioLogado) return;
+    const nome = usuarioLogado.nome || usuarioLogado.usuario;
+    document.getElementById('iniciais-usuario').textContent = utilidades.obterIniciais(nome);
+    document.getElementById('nome-usuario').textContent = nome;
+    document.getElementById('menu-nome-usuario').textContent = nome;
+    document.getElementById('menu-situacao-usuario').textContent =
+      `${usuarioLogado.papel === 'dono' ? 'Dono' : 'Funcionário'} · ${utilidades.rotularStatus(statusAtual)}`;
+    document.getElementById('bolinha-status-usuario').dataset.status = statusAtual;
+    document.getElementById('botao-usuario').setAttribute('aria-label', `${nome}, ${utilidades.rotularStatus(statusAtual)}. Abrir menu`);
+    document.querySelectorAll('#opcoes-menu-usuario [role="menuitemradio"]').forEach((opcao) => {
+      opcao.setAttribute('aria-checked', String(opcao.dataset.status === statusAtual));
+    });
+  }
+
+  /** Começa a acompanhar o status depois de entrar no painel. */
+  function iniciarStatus(status) {
+    statusAtual = status || 'online';
+    ficouAusenteSozinho = false;
+    ultimaAtividade = Date.now();
+    mostrarUsuarioNoCabecalho();
+    clearInterval(temporizadorDeInatividade);
+    clearInterval(temporizadorDeSinal);
+    temporizadorDeInatividade = setInterval(conferirInatividade, 30 * 1000);
+    temporizadorDeSinal = setInterval(enviarSinalDoPainel, MINUTOS_ENTRE_SINAIS * MILISSEGUNDOS_POR_MINUTO);
+  }
+
+  function pararStatus() {
+    clearInterval(temporizadorDeInatividade);
+    clearInterval(temporizadorDeSinal);
+    usuarioLogado = null;
+  }
+
+  async function escolherStatus(status, automatico = false) {
+    const statusAnterior = statusAtual;
+    statusAtual = status;
+    mostrarUsuarioNoCabecalho();
+    try {
+      const resposta = await api.alterarStatus(status, automatico);
+      statusAtual = resposta.status;
+      mostrarUsuarioNoCabecalho();
+      if (!automatico) {
+        ficouAusenteSozinho = false;
+        componentes.mostrarToast(`Status: ${utilidades.rotularStatus(statusAtual)}`);
+      }
+      if (ehDono() && !document.getElementById('aba-equipe').classList.contains('oculto')) carregarEquipe();
+    } catch (erro) {
+      statusAtual = statusAnterior;
+      mostrarUsuarioNoCabecalho();
+      tratarErroDoServidor(erro, (mensagem) => componentes.mostrarToast(mensagem));
+    }
+  }
+
+  /** Mexeu no painel: se ele tinha ficado "ausente" sozinho, volta para "online". */
+  function registrarAtividade() {
+    ultimaAtividade = Date.now();
+    if (ficouAusenteSozinho && usuarioLogado) {
+      ficouAusenteSozinho = false;
+      escolherStatus('online', true);
+    }
+  }
+
+  /** Online e parado há 10 minutos → "ausente" sozinho (pausa e offline escolhidos ficam como estão). */
+  function conferirInatividade() {
+    if (!usuarioLogado || statusAtual !== 'online') return;
+    if (Date.now() - ultimaAtividade >= MINUTOS_PARADO_PARA_AUSENTE * MILISSEGUNDOS_POR_MINUTO) {
+      ficouAusenteSozinho = true;
+      escolherStatus('ausente', true);
+    }
+  }
+
+  async function enviarSinalDoPainel() {
+    if (!usuarioLogado) return;
+    try {
+      const resposta = await api.obterStatus();
+      // Outra aba ou outro aparelho pode ter trocado o status
+      if (resposta.status !== statusAtual && !ficouAusenteSozinho) {
+        statusAtual = resposta.status;
+        mostrarUsuarioNoCabecalho();
+      }
+    } catch (erro) {
+      tratarErroDoServidor(erro, () => {});
     }
   }
 
@@ -1291,10 +1430,17 @@
           <span class="etiqueta">${ehFuncionario ? 'Funcionário' : 'Dono'}</span>
           ${usuario.ativo ? '' : '<span class="etiqueta">Desativado</span>'}
           ${usuario.doisFatores ? '<span class="etiqueta">2FA ativo</span>' : ''}
+          ${usuario.ativo ? montarHtmlStatusNaEquipe(usuario) : ''}
           <p>Usuário: ${escaparHtml(usuario.usuario)} · último acesso: ${escaparHtml(ultimoAcesso)}</p>
         </div>
         ${acoes}
       </div>`;
+  }
+
+  function montarHtmlStatusNaEquipe(usuario) {
+    const desde = usuario.statusDesde ? ` desde ${escaparHtml(formatarDataHora(usuario.statusDesde))}` : '';
+    return `<span class="status-na-equipe"><span class="bolinha-status" data-status="${escaparHtml(usuario.status)}" aria-hidden="true"></span>` +
+      `${escaparHtml(utilidades.rotularStatus(usuario.status))}${desde}</span>`;
   }
 
   function mostrarErroEm(idElemento, mensagem) {

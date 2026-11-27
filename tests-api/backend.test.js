@@ -47,12 +47,17 @@ function criarNavegador() {
       corpoEnviado = JSON.stringify(corpo);
     }
 
-    const resposta = await fetch(`${ENDERECO_BASE}/${caminho}`, {
-      method: metodo,
-      headers: cabecalhosFinais,
-      body: corpoEnviado,
-      redirect: 'manual',
-    });
+    const opcoesDoFetch = { method: metodo, headers: cabecalhosFinais, body: corpoEnviado, redirect: 'manual' };
+    let resposta;
+    try {
+      resposta = await fetch(`${ENDERECO_BASE}/${caminho}`, opcoesDoFetch);
+    } catch (erro) {
+      // O Apache às vezes fecha uma conexão parada no mesmo instante em que ela é reaproveitada:
+      // nesse caso (só erro de conexão, sem resposta), tenta de novo uma vez
+      const codigoDoErro = erro.cause && erro.cause.code;
+      if (!['UND_ERR_SOCKET', 'ECONNRESET', 'UND_ERR_CLOSED'].includes(codigoDoErro)) throw erro;
+      resposta = await fetch(`${ENDERECO_BASE}/${caminho}`, opcoesDoFetch);
+    }
     const cookieRecebido = resposta.headers.get('set-cookie');
     if (cookieRecebido) cookieDeSessao = cookieRecebido.split(';')[0];
     const tipo = resposta.headers.get('content-type') || '';
@@ -990,5 +995,44 @@ test('venda no balcão nasce vendida e baixa o estoque; sem peça, nenhuma venda
     apagarPedidosDoProduto(produto.id);
     await excluirProdutoDeTeste(dono, produto.id);
     rodarSql(`UPDATE usuarios SET ativo = 0 WHERE usuario = '${USUARIO_FUNCIONARIO_VENDAS}'`);
+  }
+});
+
+// ---------- Status da equipe ----------
+
+test('entrar deixa online, a pessoa troca o status e sair deixa offline; o dono vê na equipe', async () => {
+  const usuarioDoTeste = 'teste-status';
+  criarUsuarioDeTeste(usuarioDoTeste, 'funcionario');
+  const funcionario = criarNavegador();
+  await funcionario.entrar(usuarioDoTeste, SENHA_TESTE);
+  const dono = criarNavegador();
+  await dono.entrar();
+  const statusNaEquipe = async () => {
+    const equipe = (await dono.requisitar('api/admin/usuarios.php')).dados.usuarios;
+    return equipe.find((usuario) => usuario.usuario === usuarioDoTeste).status;
+  };
+  try {
+    assert.equal((await funcionario.requisitar('api/admin/painel.php')).dados.usuario.status, 'online');
+    assert.equal(await statusNaEquipe(), 'online');
+
+    const pausa = await funcionario.requisitar('api/admin/status.php', { metodo: 'POST', corpo: { status: 'pausa' } });
+    assert.equal(pausa.status, 200);
+    assert.equal(pausa.dados.status, 'pausa');
+    assert.ok(pausa.dados.statusDesde);
+    assert.equal(await statusNaEquipe(), 'pausa');
+
+    const invalido = await funcionario.requisitar('api/admin/status.php', { metodo: 'POST', corpo: { status: 'dormindo' } });
+    assert.equal(invalido.status, 422);
+
+    // Painel fechado sem sair: depois de 10 minutos sem sinal, aparece offline
+    rodarSql(`UPDATE usuarios SET visto_em = visto_em - INTERVAL 11 MINUTE WHERE usuario = '${usuarioDoTeste}'`);
+    assert.equal(await statusNaEquipe(), 'offline');
+    // Voltar a usar o painel dá sinal de novo e o status escolhido volta a valer
+    assert.equal((await funcionario.requisitar('api/admin/status.php')).dados.status, 'pausa');
+
+    await funcionario.requisitar('api/sessao.php', { metodo: 'DELETE' });
+    assert.equal(await statusNaEquipe(), 'offline');
+  } finally {
+    rodarSql(`UPDATE usuarios SET ativo = 0 WHERE usuario = '${usuarioDoTeste}'`);
   }
 });

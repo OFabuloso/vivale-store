@@ -184,6 +184,18 @@
     return requisitar('api/admin/senha.php', { metodo: 'POST', corpo: { senhaAtual, novaSenha } });
   }
 
+  // ---------- Status de quem está logado ----------
+
+  /** Também serve de sinal de que o painel continua aberto. */
+  function obterStatus() {
+    return requisitar('api/admin/status.php');
+  }
+
+  /** automatico: troca feita sozinha pelo painel (ausente por inatividade), não vai para o registro de ações. */
+  function alterarStatus(status, automatico = false) {
+    return requisitar('api/admin/status.php', { metodo: 'POST', corpo: { status, automatico } });
+  }
+
   // ---------- Vendas ----------
 
   /** Pedidos de uma situação (pendente, vendido ou cancelado) e quantos estão pendentes. */
@@ -270,6 +282,8 @@
     cadastrarFuncionario,
     alterarFuncionario,
     obterDoisFatores,
+    obterStatus,
+    alterarStatus,
     listarPedidos,
     venderPedido,
     cancelarPedido,

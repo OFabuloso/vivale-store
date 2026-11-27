@@ -213,6 +213,20 @@
     return tamanho === TAMANHO_UNICO ? 'Único' : tamanho;
   }
 
+  const STATUS_DA_EQUIPE = { online: 'Online', pausa: 'Pausa', ausente: 'Ausente', offline: 'Offline' };
+
+  function rotularStatus(status) {
+    return STATUS_DA_EQUIPE[status] || STATUS_DA_EQUIPE.offline;
+  }
+
+  /** Iniciais para o círculo do usuário ("Ana Souza" → "AS", "dono" → "D"). */
+  function obterIniciais(nome) {
+    const palavras = String(nome || '').trim().split(/\s+/).filter(Boolean);
+    if (palavras.length === 0) return '?';
+    const letras = palavras.length === 1 ? palavras[0][0] : palavras[0][0] + palavras[palavras.length - 1][0];
+    return letras.toUpperCase();
+  }
+
   const FORMAS_DE_PAGAMENTO = { pix: 'Pix', dinheiro: 'Dinheiro', credito: 'Cartão de crédito', debito: 'Cartão de débito' };
 
   function rotularFormaDePagamento(forma) {
@@ -266,6 +280,8 @@
     TAMANHO_UNICO,
     rotularTamanho,
     rotularFormaDePagamento,
+    rotularStatus,
+    obterIniciais,
   };
 
   if (typeof module !== 'undefined' && module.exports) {

@@ -17,7 +17,7 @@ if (metodoDaRequisicao() !== 'GET') {
 
 $produtos = listarProdutosComEstoque(false);
 $respostaDoPainel = [
-    'usuario' => $usuario + ['doisFatores' => obterDoisFatoresDoUsuario((int) $usuario['id']) !== null],
+    'usuario' => $usuario + ['doisFatores' => obterDoisFatoresDoUsuario((int) $usuario['id']) !== null] + obterStatus((int) $usuario['id']),
     'produtos' => $produtos,
     'alertasEstoque' => listarAlertasDeEstoque($produtos),
     'configuracao' => [

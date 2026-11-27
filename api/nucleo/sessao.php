@@ -118,6 +118,7 @@ function exigirUsuarioLogado(): array
     if (metodoDaRequisicao() !== 'GET') {
         exigirTokenCsrf();
     }
+    registrarSinalDoPainel((int) $usuario['id']);
     return $usuario;
 }
 
@@ -230,6 +231,7 @@ function concluirLogin(array $usuario): array
 {
     executarConsulta('DELETE FROM tentativas_login WHERE usuario = ?', [$usuario['usuario']]);
     executarConsulta('UPDATE usuarios SET ultimo_acesso = NOW() WHERE id = ?', [$usuario['id']]);
+    definirStatus((int) $usuario['id'], 'online');
 
     // Novo identificador de sessão a cada login (evita sequestro de sessão)
     session_regenerate_id(true);

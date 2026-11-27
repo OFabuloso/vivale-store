@@ -173,3 +173,16 @@ test('registra o pedido do site só com o necessário; se o servidor falhar, dev
     console.warn = avisoOriginal;
   }
 });
+
+test('troca de status vai para o endpoint de status, marcando quando é automática', async () => {
+  await api.alterarStatus('pausa');
+  await api.alterarStatus('ausente', true);
+  await api.obterStatus();
+  assert.deepEqual(requisicoesFeitas.map((requisicao) => [requisicao.caminho, requisicao.method]), [
+    ['api/admin/status.php', 'POST'],
+    ['api/admin/status.php', 'POST'],
+    ['api/admin/status.php', 'GET'],
+  ]);
+  assert.deepEqual(JSON.parse(requisicoesFeitas[0].body), { status: 'pausa', automatico: false });
+  assert.deepEqual(JSON.parse(requisicoesFeitas[1].body), { status: 'ausente', automatico: true });
+});
