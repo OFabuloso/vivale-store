@@ -15,6 +15,7 @@ test('gera a carga com todos os produtos, contatos e o valor mínimo atuais', ()
   for (const produto of dadosIniciais.produtos) {
     assert.ok(sql.includes(`'${produto.id}'`), `falta o produto ${produto.id}`);
   }
-  assert.ok(sql.includes("('contato-principal', 'Atendimento', '5521979396729', 1, 0)"));
+  const [primeiroContato] = dadosIniciais.configuracao.contatosWhatsApp;
+  assert.ok(sql.includes(`(${textoSql(primeiroContato.id)}, ${textoSql(primeiroContato.nome)}, ${textoSql(primeiroContato.numero)}, 1, 0)`));
   assert.ok(sql.includes(`('valorMinimo', '${dadosIniciais.configuracao.valorMinimo}')`));
 });

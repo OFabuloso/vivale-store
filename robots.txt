@@ -1,0 +1,8 @@
+# Robôs de busca (Google e outros): podem ver a vitrine; o painel, a API e a página de
+# finalizar pedido não aparecem nas buscas.
+User-agent: *
+Disallow: /admin.html
+Disallow: /api/
+Disallow: /contato.html
+
+Sitemap: https://vivalestore.com.br/sitemap.xml

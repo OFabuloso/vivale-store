@@ -36,3 +36,16 @@ test('as páginas pedem os scripts e o CSS com versão, para escapar de caches a
     for (const endereco of enderecosLocais) assert.match(endereco, /\?v=\d+$/, `${pagina}: ${endereco}`);
   }
 });
+
+test('quem entra pelo www vai para o endereço sem www, com redirecionamento permanente', () => {
+  assert.match(conteudoHtaccess, /RewriteCond %\{HTTP_HOST\} \^www\\\.\(\.\+\)\$ \[NC\]\n\s*RewriteRule \^ https:\/\/%1%\{REQUEST_URI\} \[L,R=301\]/);
+});
+
+test('robots.txt esconde o painel e a API do Google e aponta o sitemap', () => {
+  const robots = fs.readFileSync(path.join(__dirname, '..', 'robots.txt'), 'utf8');
+  assert.match(robots, /^Disallow: \/admin\.html$/m);
+  assert.match(robots, /^Disallow: \/api\/$/m);
+  assert.match(robots, /^Sitemap: https:\/\/vivalestore\.com\.br\/sitemap\.xml$/m);
+  const sitemap = fs.readFileSync(path.join(__dirname, '..', 'sitemap.xml'), 'utf8');
+  assert.match(sitemap, /<loc>https:\/\/vivalestore\.com\.br\/<\/loc>/);
+});

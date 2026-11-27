@@ -8,6 +8,7 @@
     "start": "python3 -m http.server 8080",
     "otimizar-fotos": "node ferramentas/otimizar-fotos.js",
     "gerar-sql-catalogo": "node ferramentas/gerar-sql-catalogo.js",
+    "atualizar-dados-iniciais": "node ferramentas/atualizar-dados-iniciais.js",
     "test:api": "node --test tests-api/"
   },
   "devDependencies": {
