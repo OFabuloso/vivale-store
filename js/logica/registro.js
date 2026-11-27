@@ -25,7 +25,7 @@
     },
     loja: {
       rotulo: 'Configurações da loja',
-      acoes: ['contatos_salvos', 'configuracao_salva', 'backup_baixado'],
+      acoes: ['contatos_salvos', 'configuracao_salva', 'backup_baixado', 'fotos_sem_uso_apagadas'],
     },
     seguranca: {
       rotulo: 'Equipe e segurança',
@@ -62,6 +62,8 @@
       `Alterou os atendentes do WhatsApp (ligados: ${listarNomes(detalhes.ligados)}; desligados: ${listarNomes(detalhes.desligados)})`,
     configuracao_salva: (detalhes) => `Mudou o pedido mínimo para ${utilidades.formatarMoeda(detalhes.valorMinimo)}`,
     backup_baixado: () => 'Baixou o backup completo da loja',
+    fotos_sem_uso_apagadas: (detalhes) =>
+      `Apagou ${detalhes.quantidade} ${detalhes.quantidade === 1 ? 'foto sem uso' : 'fotos sem uso'} (${utilidades.formatarTamanhoDeArquivo(detalhes.bytes)})`,
     senha_trocada: () => 'Trocou a própria senha',
     funcionario_cadastrado: (detalhes) => `Cadastrou o funcionário ${detalhes.usuario}`,
     funcionario_senha_redefinida: (detalhes) => `Redefiniu a senha de ${detalhes.usuario}`,

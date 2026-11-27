@@ -93,6 +93,7 @@
     document.getElementById('formulario-senha').addEventListener('submit', trocarSenha);
     document.getElementById('botao-exportar').addEventListener('click', exportarCatalogo);
     document.getElementById('botao-baixar-backup').addEventListener('click', baixarBackupCompleto);
+    document.getElementById('botao-apagar-fotos-sem-uso').addEventListener('click', apagarFotosSemUso);
 
     elementos.listaEquipe = document.getElementById('lista-equipe');
     elementos.janelaSenhaFuncionario = document.getElementById('janela-senha-funcionario');
@@ -231,6 +232,7 @@
     if (ehDono()) {
       carregarEquipe();
       mostrarSituacaoDoBackup(dadosDoPainel.backup);
+      carregarFotosSemUso();
     }
     document.getElementById('aviso-dois-fatores').classList.toggle('oculto', !ehDono() || usuarioLogado.doisFatores);
     carregarDoisFatores();
@@ -1624,6 +1626,47 @@
     const { emDia, texto } = utilidades.descreverSituacaoDoBackup(situacao);
     elementoSituacao.textContent = texto;
     elementoSituacao.classList.toggle('sucesso', emDia);
+  }
+
+  // Fotos que nenhum produto usa mais (trocadas ou de produtos excluídos)
+  let fotosSemUso = { quantidade: 0, bytes: 0 };
+
+  function descreverFotosSemUso({ quantidade, bytes }) {
+    return `${quantidade} ${quantidade === 1 ? 'foto' : 'fotos'} (${utilidades.formatarTamanhoDeArquivo(bytes)})`;
+  }
+
+  async function carregarFotosSemUso() {
+    const situacao = document.getElementById('situacao-fotos-sem-uso');
+    const botaoApagar = document.getElementById('botao-apagar-fotos-sem-uso');
+    try {
+      fotosSemUso = await api.contarFotosSemUso();
+      situacao.textContent = fotosSemUso.quantidade
+        ? `${descreverFotosSemUso(fotosSemUso)} que nenhum produto usa mais. Fotos enviadas nas últimas 24 horas não entram na conta.`
+        : 'Nenhuma foto sem uso. Fotos trocadas ou de produtos excluídos aparecem aqui depois de 24 horas.';
+      botaoApagar.classList.toggle('oculto', !fotosSemUso.quantidade);
+    } catch (erro) {
+      tratarErroDoServidor(erro, (mensagem) => {
+        situacao.textContent = mensagem;
+      });
+    }
+  }
+
+  async function apagarFotosSemUso(evento) {
+    const mensagem =
+      `Apagar ${descreverFotosSemUso(fotosSemUso)} que nenhum produto usa? Não dá para desfazer. ` +
+      'Se quiser guardar uma cópia, baixe o backup completo antes.';
+    if (!confirm(mensagem)) return;
+    const botaoApagar = evento.currentTarget;
+    botaoApagar.disabled = true;
+    try {
+      const apagadas = await api.apagarFotosSemUso();
+      componentes.mostrarToast(`${descreverFotosSemUso(apagadas)} ${apagadas.quantidade === 1 ? 'apagada' : 'apagadas'}`);
+      await carregarFotosSemUso();
+    } catch (erro) {
+      tratarErroDoServidor(erro, (mensagemDeErro) => alert(mensagemDeErro));
+    } finally {
+      botaoApagar.disabled = false;
+    }
   }
 
   async function baixarBackupCompleto(evento) {

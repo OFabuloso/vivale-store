@@ -10,6 +10,7 @@ const {
   rotularTamanho,
   rotularStatus,
   obterIniciais,
+  formatarTamanhoDeArquivo,
 } = require('../js/logica/utilidades.js');
 
 const COR_NEUTRA = '#cbbfb4';
@@ -127,4 +128,10 @@ test('iniciais do usuário para o círculo do cabeçalho', () => {
   assert.equal(obterIniciais('Maria da Silva Costa'), 'MC');
   assert.equal(obterIniciais('dono'), 'D');
   assert.equal(obterIniciais(''), '?');
+});
+
+test('tamanho de arquivo em bytes, KB ou MB, no jeito brasileiro', () => {
+  assert.equal(formatarTamanhoDeArquivo(800), '800 bytes');
+  assert.equal(formatarTamanhoDeArquivo(1536), '1,5 KB');
+  assert.equal(formatarTamanhoDeArquivo(3_400_000), '3,2 MB');
 });

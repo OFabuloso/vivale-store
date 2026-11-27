@@ -208,6 +208,17 @@
     return requisitar(`api/admin/auditoria.php${busca ? `?${busca}` : ''}`);
   }
 
+  // ---------- Fotos sem uso (só o dono) ----------
+
+  /** { quantidade, bytes } das fotos enviadas que nenhum produto usa. */
+  function contarFotosSemUso() {
+    return requisitar('api/admin/fotos.php');
+  }
+
+  function apagarFotosSemUso() {
+    return requisitar('api/admin/fotos.php', { metodo: 'DELETE' });
+  }
+
   // ---------- Vendas ----------
 
   /** Pedidos de uma situação (pendente, vendido ou cancelado) e quantos estão pendentes. */
@@ -296,6 +307,8 @@
     obterDoisFatores,
     obterStatus,
     listarRegistro,
+    contarFotosSemUso,
+    apagarFotosSemUso,
     alterarStatus,
     listarPedidos,
     venderPedido,

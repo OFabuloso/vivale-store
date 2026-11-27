@@ -15,7 +15,7 @@
     <link rel="icon" href="img/marca/favicon.ico" sizes="any" />
     <link rel="icon" type="image/png" href="img/marca/favicon-32.png" sizes="32x32" />
     <link rel="apple-touch-icon" href="img/marca/apple-touch-icon.png" />
-    <link rel="stylesheet" href="css/estilos.css?v=17" />
+    <link rel="stylesheet" href="css/estilos.css?v=18" />
   </head>
   <body>
     <!-- Login (usuário e senha conferidos no servidor) -->
@@ -280,6 +280,11 @@
               "Só o catálogo" gera o <code>js/dados/dados-iniciais.js</code>, usado pela loja se o servidor
               ficar fora do ar.
             </p>
+            <div class="fotos-sem-uso">
+              <h3>Fotos sem uso</h3>
+              <p class="campo-ajuda" id="situacao-fotos-sem-uso">Conferindo...</p>
+              <button class="botao botao-contorno oculto" id="botao-apagar-fotos-sem-uso" type="button">Apagar fotos sem uso</button>
+            </div>
           </div>
         </section>
 
@@ -558,18 +563,18 @@
     </dialog>
 
     <!-- Ordem importa: dados → lógica → telas → página -->
-    <script src="js/dados/dados-iniciais.js?v=17"></script>
-    <script src="js/logica/utilidades.js?v=17"></script>
-    <script src="js/logica/estoque.js?v=17"></script>
-    <script src="js/logica/contatos.js?v=17"></script>
-    <script src="js/logica/armazenamento.js?v=17"></script>
-    <script src="js/logica/api.js?v=17"></script>
-    <script src="js/logica/comprovante.js?v=17"></script>
-    <script src="js/logica/registro.js?v=17"></script>
-    <script src="js/logica/imagem.js?v=17"></script>
-    <script src="js/telas/componentes.js?v=17"></script>
-    <script src="js/vendor/qrcode-generator.js?v=17"></script>
-    <script src="js/telas/tela-admin.js?v=17"></script>
-    <script src="js/paginas/pagina-admin.js?v=17"></script>
+    <script src="js/dados/dados-iniciais.js?v=18"></script>
+    <script src="js/logica/utilidades.js?v=18"></script>
+    <script src="js/logica/estoque.js?v=18"></script>
+    <script src="js/logica/contatos.js?v=18"></script>
+    <script src="js/logica/armazenamento.js?v=18"></script>
+    <script src="js/logica/api.js?v=18"></script>
+    <script src="js/logica/comprovante.js?v=18"></script>
+    <script src="js/logica/registro.js?v=18"></script>
+    <script src="js/logica/imagem.js?v=18"></script>
+    <script src="js/telas/componentes.js?v=18"></script>
+    <script src="js/vendor/qrcode-generator.js?v=18"></script>
+    <script src="js/telas/tela-admin.js?v=18"></script>
+    <script src="js/paginas/pagina-admin.js?v=18"></script>
   </body>
 </html>

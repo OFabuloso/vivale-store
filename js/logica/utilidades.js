@@ -213,6 +213,14 @@
     return tamanho === TAMANHO_UNICO ? 'Único' : tamanho;
   }
 
+  /** 1536 → "1,5 KB"; 3_400_000 → "3,2 MB". */
+  function formatarTamanhoDeArquivo(bytes) {
+    const quantidade = Number(bytes) || 0;
+    if (quantidade < 1024) return `${quantidade} bytes`;
+    const [valor, unidade] = quantidade < 1024 * 1024 ? [quantidade / 1024, 'KB'] : [quantidade / (1024 * 1024), 'MB'];
+    return `${valor.toLocaleString('pt-BR', { maximumFractionDigits: 1 })} ${unidade}`;
+  }
+
   const STATUS_DA_EQUIPE = { online: 'Online', pausa: 'Pausa', ausente: 'Ausente', offline: 'Offline' };
 
   function rotularStatus(status) {
@@ -282,6 +290,7 @@
     rotularFormaDePagamento,
     rotularStatus,
     obterIniciais,
+    formatarTamanhoDeArquivo,
   };
 
   if (typeof module !== 'undefined' && module.exports) {

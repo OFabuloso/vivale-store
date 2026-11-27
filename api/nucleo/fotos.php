@@ -103,3 +103,79 @@ function salvarFotoEnviada(array $arquivoEnviado): string
     }
     return "fotos/{$nomeDaFoto}.jpg";
 }
+
+// ---------- Fotos sem uso ----------
+
+// Foto enviada há pouco pode ser de um produto que ainda está sendo cadastrado: nunca é apagada
+const HORAS_ANTES_DE_CONTAR_COMO_SEM_USO = 24;
+
+/** Fotos citadas no catálogo de reserva (js/dados/dados-iniciais.js), que também contam como em uso. */
+function listarFotosDoCatalogoDeReserva(): array
+{
+    $caminhoReserva = dirname(__DIR__, 2) . '/js/dados/dados-iniciais.js';
+    $conteudo = is_readable($caminhoReserva) ? (string) file_get_contents($caminhoReserva) : '';
+    preg_match_all('#fotos/([a-f0-9]{32})\.jpg#', $conteudo, $encontradas);
+    return array_fill_keys($encontradas[1], true);
+}
+
+/**
+ * Fotos enviadas pelo painel que nenhum produto usa (nem os inativos) nem o catálogo de reserva, agrupadas pelo nome:
+ * cada foto tem o JPEG e as versões WebP de 400 e 600 px.
+ * Devolve [nome => [caminhos dos arquivos]].
+ */
+function encontrarFotosSemUso(): array
+{
+    $fotosEmUso = listarFotosDoCatalogoDeReserva();
+    foreach (executarConsulta("SELECT foto FROM produtos WHERE foto LIKE 'fotos/%'")->fetchAll(PDO::FETCH_COLUMN) as $foto) {
+        $fotosEmUso[basename($foto, '.jpg')] = true;
+    }
+
+    $limiteDeIdade = time() - HORAS_ANTES_DE_CONTAR_COMO_SEM_USO * 3600;
+    $arquivosPorFoto = [];
+    $fotosRecentes = [];
+    foreach (glob(pastaDeUploads() . '/*') ?: [] as $caminhoArquivo) {
+        $nomeArquivo = basename($caminhoArquivo);
+        if (!is_file($caminhoArquivo) || preg_match(PADRAO_NOME_DE_FOTO, $nomeArquivo) !== 1) {
+            continue;
+        }
+        $nomeDaFoto = substr($nomeArquivo, 0, 32);
+        if (isset($fotosEmUso[$nomeDaFoto])) {
+            continue;
+        }
+        if (filemtime($caminhoArquivo) > $limiteDeIdade) {
+            $fotosRecentes[$nomeDaFoto] = true;
+        }
+        $arquivosPorFoto[$nomeDaFoto][] = $caminhoArquivo;
+    }
+    return array_diff_key($arquivosPorFoto, $fotosRecentes);
+}
+
+function resumirFotos(array $arquivosPorFoto): array
+{
+    $bytes = 0;
+    foreach ($arquivosPorFoto as $arquivos) {
+        foreach ($arquivos as $caminhoArquivo) {
+            $bytes += (int) filesize($caminhoArquivo);
+        }
+    }
+    return ['quantidade' => count($arquivosPorFoto), 'bytes' => $bytes];
+}
+
+/** Quantas fotos estão sem uso e quanto ocupam: { quantidade, bytes }. */
+function listarFotosSemUso(): array
+{
+    return resumirFotos(encontrarFotosSemUso());
+}
+
+/** Apaga as fotos sem uso (todas as versões de cada uma) e devolve o que foi apagado. */
+function apagarFotosSemUso(): array
+{
+    $fotosSemUso = encontrarFotosSemUso();
+    $resumo = resumirFotos($fotosSemUso);
+    foreach ($fotosSemUso as $arquivos) {
+        foreach ($arquivos as $caminhoArquivo) {
+            unlink($caminhoArquivo);
+        }
+    }
+    return $resumo;
+}

@@ -1075,3 +1075,54 @@ test('só o dono vê o registro de ações, com filtros e páginas que não repe
     rodarSql(`UPDATE usuarios SET ativo = 0 WHERE usuario = '${usuarioDoTeste}'`);
   }
 });
+
+// ---------- Fotos sem uso ----------
+
+const PASTA_DE_UPLOADS_NO_DOCKER = '/home/u151095779/domains/vivalestore.com.br/uploads';
+
+function arquivosDaFoto(nomeDaFoto) {
+  return rodarNoDocker('web', ['sh', '-c', `ls ${PASTA_DE_UPLOADS_NO_DOCKER} | grep ${nomeDaFoto} || true`]).trim().split('\n').filter(Boolean);
+}
+
+test('apagar fotos sem uso tira só as antigas que nenhum produto usa; é só do dono', async () => {
+  const dono = criarNavegador();
+  await dono.entrar();
+  const enviarFoto = async () => {
+    const formulario = new FormData();
+    formulario.append('foto', new Blob([await criarPngPequeno()], { type: 'image/png' }), 'foto.png');
+    return (await dono.requisitar('api/admin/fotos.php', { metodo: 'POST', corpo: formulario })).dados.foto;
+  };
+  const fotoDoProduto = await enviarFoto();
+  const fotoAntigaSemUso = await enviarFoto();
+  const fotoRecenteSemUso = await enviarFoto();
+  const nome = (foto) => foto.replace('fotos/', '').replace('.jpg', '');
+  const produto = await criarProdutoComEstoque(dono, { 'P|Preto': 1, 'M|Preto': 1 }, { foto: fotoDoProduto });
+  try {
+    // Só a foto do produto e a "antiga" ficam com mais de 24 horas
+    for (const foto of [fotoDoProduto, fotoAntigaSemUso]) {
+      rodarNoDocker('web', ['sh', '-c', `touch -d '2 days ago' ${PASTA_DE_UPLOADS_NO_DOCKER}/${nome(foto)}*`]);
+    }
+    const resumo = await dono.requisitar('api/admin/fotos.php');
+    assert.equal(resumo.status, 200);
+    assert.ok(resumo.dados.quantidade >= 1);
+    assert.ok(resumo.dados.bytes > 0);
+
+    criarUsuarioDeTeste('teste-fotos', 'funcionario');
+    const funcionario = criarNavegador();
+    await funcionario.entrar('teste-fotos', SENHA_TESTE);
+    assert.equal((await funcionario.requisitar('api/admin/fotos.php')).status, 403);
+    assert.equal((await funcionario.requisitar('api/admin/fotos.php', { metodo: 'DELETE' })).status, 403);
+
+    const apagadas = await dono.requisitar('api/admin/fotos.php', { metodo: 'DELETE' });
+    assert.equal(apagadas.status, 200);
+    assert.equal(apagadas.dados.quantidade, resumo.dados.quantidade);
+    assert.deepEqual(arquivosDaFoto(nome(fotoAntigaSemUso)), [], 'a foto antiga sem uso some, com as versões WebP');
+    assert.equal(arquivosDaFoto(nome(fotoDoProduto)).length, 3, 'a foto do produto fica');
+    assert.equal(arquivosDaFoto(nome(fotoRecenteSemUso)).length, 3, 'a foto enviada há pouco fica');
+    assert.equal((await dono.requisitar('api/admin/fotos.php')).dados.quantidade, 0);
+    assert.ok(rodarSql("SELECT COUNT(*) FROM auditoria WHERE acao = 'fotos_sem_uso_apagadas'").trim() !== '0');
+  } finally {
+    await excluirProdutoDeTeste(dono, produto.id);
+    rodarSql("UPDATE usuarios SET ativo = 0 WHERE usuario = 'teste-fotos'");
+  }
+});
