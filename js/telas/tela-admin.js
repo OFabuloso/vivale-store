@@ -932,7 +932,11 @@
     });
     document.getElementById('lista-pedidos').addEventListener('click', tratarAcaoPedido);
     document.getElementById('botao-nova-venda').addEventListener('click', abrirNovaVenda);
-    document.getElementById('venda-produto').addEventListener('change', preencherVariacoesDaVenda);
+    document.getElementById('venda-busca').addEventListener('input', renderizarGradeDaVenda);
+    document.getElementById('venda-grade-produtos').addEventListener('click', (evento) => {
+      const cartao = evento.target.closest('[data-id-produto]');
+      if (cartao) escolherProdutoDaVenda(cartao.dataset.idProduto);
+    });
     document.getElementById('venda-tamanho').addEventListener('change', mostrarDisponivelNaVenda);
     document.getElementById('venda-cor').addEventListener('change', mostrarDisponivelNaVenda);
     document.getElementById('botao-adicionar-item-venda').addEventListener('click', adicionarItemNaVenda);
@@ -1102,15 +1106,49 @@
     itensDaVendaNoBalcao = [];
     document.getElementById('formulario-nova-venda').reset();
     mostrarErroEm('erro-nova-venda', '');
-    const produtos = [...armazenamento.obterProdutos()].sort((primeiro, segundo) => primeiro.nome.localeCompare(segundo.nome, 'pt-BR'));
-    document.getElementById('venda-produto').innerHTML =
-      '<option value="">Escolha o produto</option>' +
-      produtos
-        .map((produto) => `<option value="${escaparHtml(produto.id)}">${escaparHtml(produto.nome)}${produto.ativo === false ? ' (inativo)' : ''}</option>`)
-        .join('');
+    document.getElementById('venda-produto').value = '';
+    renderizarGradeDaVenda();
     preencherVariacoesDaVenda();
     renderizarItensDaVenda();
     elementos.janelaNovaVenda.showModal();
+  }
+
+  /** Grade de fotos para a vendedora reconhecer a peça pela imagem; a busca filtra pelo nome. */
+  function renderizarGradeDaVenda() {
+    const busca = utilidades.normalizarTexto(document.getElementById('venda-busca').value.trim());
+    const idEscolhido = document.getElementById('venda-produto').value;
+    const produtos = [...armazenamento.obterProdutos()]
+      .filter((produto) => !busca || utilidades.normalizarTexto(produto.nome).includes(busca))
+      .sort((primeiro, segundo) => primeiro.nome.localeCompare(segundo.nome, 'pt-BR'));
+    const grade = document.getElementById('venda-grade-produtos');
+    grade.innerHTML = produtos.length
+      ? produtos
+          .map(
+            (produto) => `
+        <button class="cartao-produto-venda ${produto.id === idEscolhido ? 'escolhido' : ''}" type="button" role="option"
+          aria-selected="${produto.id === idEscolhido}" data-id-produto="${escaparHtml(produto.id)}" title="${escaparHtml(produto.nome)}">
+          <img alt="" loading="lazy" />
+          ${produto.ativo === false ? '<span class="etiqueta">Inativo</span>' : ''}
+          <span class="cartao-produto-venda-nome">${escaparHtml(produto.nome)}</span>
+          <strong>${formatarMoeda(produto.preco)}</strong>
+        </button>`,
+          )
+          .join('')
+      : '<p class="campo-ajuda">Nenhum produto com esse nome.</p>';
+    grade.querySelectorAll('img').forEach((elementoImagem, posicao) => {
+      componentes.aplicarFotoComReserva(elementoImagem, produtos[posicao], '110px');
+    });
+  }
+
+  function escolherProdutoDaVenda(idProduto) {
+    document.getElementById('venda-produto').value = idProduto;
+    document.getElementById('venda-grade-produtos').querySelectorAll('[data-id-produto]').forEach((cartao) => {
+      const escolhido = cartao.dataset.idProduto === idProduto;
+      cartao.classList.toggle('escolhido', escolhido);
+      cartao.setAttribute('aria-selected', String(escolhido));
+    });
+    mostrarErroEm('erro-nova-venda', '');
+    preencherVariacoesDaVenda();
   }
 
   function produtoEscolhidoNaVenda() {
@@ -1119,6 +1157,9 @@
 
   function preencherVariacoesDaVenda() {
     const produto = produtoEscolhidoNaVenda();
+    document.getElementById('venda-produto-escolhido').textContent = produto
+      ? `Escolhido: ${produto.nome} · ${formatarMoeda(produto.preco)}`
+      : 'Toque na foto da peça.';
     const montarOpcoes = (valores, rotular) =>
       valores.map((valor) => `<option value="${escaparHtml(valor)}">${escaparHtml(rotular(valor))}</option>`).join('');
     document.getElementById('venda-tamanho').innerHTML = produto ? montarOpcoes(produto.tamanhos, utilidades.rotularTamanho) : '';
@@ -1172,12 +1213,17 @@
       ? `<ul class="itens-pedido">${itensDaVendaNoBalcao
           .map(
             (item, posicao) =>
-              `<li>${item.quantidade}× ${escaparHtml(item.nome)} <span>${escaparHtml(utilidades.rotularTamanho(item.tamanho))} · ${escaparHtml(item.cor)}</span>` +
+              `<li><img class="miniatura-item-venda" alt="" data-posicao="${posicao}" />${item.quantidade}× ${escaparHtml(item.nome)} <span>${escaparHtml(utilidades.rotularTamanho(item.tamanho))} · ${escaparHtml(item.cor)}</span>` +
               ` <strong>${formatarMoeda(item.quantidade * item.preco)}</strong>` +
               ` <button class="botao-texto" type="button" data-remover-item="${posicao}">Remover</button></li>`,
           )
           .join('')}</ul>`
       : '<p class="campo-ajuda">Nenhum item ainda.</p>';
+    document.querySelectorAll('#itens-venda .miniatura-item-venda').forEach((elementoImagem) => {
+      const item = itensDaVendaNoBalcao[Number(elementoImagem.dataset.posicao)];
+      const produto = armazenamento.obterProdutoPorId(item.idProduto) || { nome: item.nome, cores: [item.cor] };
+      componentes.aplicarFotoComReserva(elementoImagem, produto);
+    });
     const total = itensDaVendaNoBalcao.reduce((soma, item) => soma + item.quantidade * item.preco, 0);
     document.getElementById('venda-total').textContent = formatarMoeda(total);
     mostrarDisponivelNaVenda();

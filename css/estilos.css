@@ -1121,6 +1121,7 @@ button {
 
 .campo input[type='text'],
 .campo input[type='number'],
+.campo input[type='search'],
 .campo input[type='password'],
 .campo input[type='tel'],
 .campo input[type='url'],
@@ -2561,4 +2562,85 @@ fieldset.campo legend {
 /* O formulário não cria caixa própria: cabeçalho, corpo e rodapé seguem o layout da janela */
 .formulario-janela {
   display: contents;
+}
+
+/* Nova venda no balcão: grade de fotos para escolher a peça pela imagem */
+.grade-produtos-venda {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  gap: 10px;
+  max-height: 340px;
+  margin-top: 8px;
+  padding: 2px;
+  overflow-y: auto;
+}
+
+.cartao-produto-venda {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px;
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-foto);
+  background: var(--cor-campo);
+  color: var(--cor-texto);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.cartao-produto-venda:hover {
+  border-color: var(--cor-destaque);
+}
+
+.cartao-produto-venda.escolhido {
+  border-color: var(--cor-destaque);
+  background: var(--cor-destaque-claro);
+  box-shadow: 0 0 0 1px var(--cor-destaque);
+}
+
+.cartao-produto-venda img {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  border-radius: calc(var(--raio-foto) - 2px);
+  object-fit: cover;
+}
+
+.cartao-produto-venda .etiqueta {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+}
+
+.cartao-produto-venda-nome {
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: 12px;
+  line-height: 1.3;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.cartao-produto-venda strong {
+  color: var(--cor-destaque-realce);
+  font-size: 13px;
+}
+
+.miniatura-item-venda {
+  display: inline-block;
+  width: 32px;
+  height: 42px;
+  margin-right: 8px;
+  border-radius: 4px;
+  object-fit: cover;
+  vertical-align: middle;
+}
+
+@media (max-width: 480px) {
+  .grade-produtos-venda {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
 }
