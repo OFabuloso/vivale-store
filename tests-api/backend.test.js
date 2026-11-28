@@ -349,6 +349,37 @@ test('produto inválido é recusado com a mensagem certa', async () => {
   }
 });
 
+test('foto de cada cor: a loja recebe só as cores do produto; foto inválida é recusada', async () => {
+  const navegador = criarNavegador();
+  await navegador.entrar();
+  const base = { nome: 'Conjunto Fotos por Cor', categoria: 'Conjuntos', preco: 99, tamanhos: ['P'], cores: ['Pink', 'Preto'], foto: 'img/produtos/produto-01.jpeg' };
+  const criado = await navegador.requisitar('api/admin/produtos.php', {
+    metodo: 'POST',
+    corpo: { ...base, fotosPorCor: { Pink: 'img/produtos/produto-03.jpeg', Preto: '', Azul: 'img/produtos/produto-02.jpeg' } },
+  });
+  assert.equal(criado.status, 200, JSON.stringify(criado.dados));
+  const { produto } = criado.dados;
+  try {
+    // "Azul" não é cor do produto e "Preto" veio vazio: ficam de fora
+    assert.deepEqual(produto.fotosPorCor, { Pink: 'img/produtos/produto-03.jpeg' });
+    const naLoja = (await criarNavegador().requisitar('api/catalogo.php')).dados.produtos.find((item) => item.id === produto.id);
+    assert.deepEqual(naLoja.fotosPorCor, { Pink: 'img/produtos/produto-03.jpeg' });
+
+    // Tirar a cor do produto leva a foto dela junto
+    const semPink = await navegador.requisitar('api/admin/produtos.php', { metodo: 'POST', corpo: { ...produto, cores: ['Preto'] } });
+    assert.deepEqual(semPink.dados.produto.fotosPorCor, {});
+
+    const invalida = await navegador.requisitar('api/admin/produtos.php', {
+      metodo: 'POST',
+      corpo: { ...base, fotosPorCor: { Pink: 'javascript:alert(1)' } },
+    });
+    assert.equal(invalida.status, 422);
+    assert.match(invalida.dados.erro, /foto da cor Pink/);
+  } finally {
+    await navegador.requisitar(`api/admin/produtos.php?id=${encodeURIComponent(produto.id)}`, { metodo: 'DELETE' });
+  }
+});
+
 test('produto de tamanho único é salvo e aparece assim na loja', async () => {
   const navegador = criarNavegador();
   await navegador.entrar();
@@ -1093,13 +1124,14 @@ test('apagar fotos sem uso tira só as antigas que nenhum produto usa; é só do
     return (await dono.requisitar('api/admin/fotos.php', { metodo: 'POST', corpo: formulario })).dados.foto;
   };
   const fotoDoProduto = await enviarFoto();
+  const fotoDaCor = await enviarFoto();
   const fotoAntigaSemUso = await enviarFoto();
   const fotoRecenteSemUso = await enviarFoto();
   const nome = (foto) => foto.replace('fotos/', '').replace('.jpg', '');
-  const produto = await criarProdutoComEstoque(dono, { 'P|Preto': 1, 'M|Preto': 1 }, { foto: fotoDoProduto });
+  const produto = await criarProdutoComEstoque(dono, { 'P|Preto': 1, 'M|Preto': 1 }, { foto: fotoDoProduto, fotosPorCor: { Preto: fotoDaCor } });
   try {
-    // Só a foto do produto e a "antiga" ficam com mais de 24 horas
-    for (const foto of [fotoDoProduto, fotoAntigaSemUso]) {
+    // Só as fotos do produto e a "antiga" ficam com mais de 24 horas
+    for (const foto of [fotoDoProduto, fotoDaCor, fotoAntigaSemUso]) {
       rodarNoDocker('web', ['sh', '-c', `touch -d '2 days ago' ${PASTA_DE_UPLOADS_NO_DOCKER}/${nome(foto)}*`]);
     }
     const resumo = await dono.requisitar('api/admin/fotos.php');
@@ -1118,6 +1150,7 @@ test('apagar fotos sem uso tira só as antigas que nenhum produto usa; é só do
     assert.equal(apagadas.dados.quantidade, resumo.dados.quantidade);
     assert.deepEqual(arquivosDaFoto(nome(fotoAntigaSemUso)), [], 'a foto antiga sem uso some, com as versões WebP');
     assert.equal(arquivosDaFoto(nome(fotoDoProduto)).length, 3, 'a foto do produto fica');
+    assert.equal(arquivosDaFoto(nome(fotoDaCor)).length, 3, 'a foto de uma cor do produto fica');
     assert.equal(arquivosDaFoto(nome(fotoRecenteSemUso)).length, 3, 'a foto enviada há pouco fica');
     assert.equal((await dono.requisitar('api/admin/fotos.php')).dados.quantidade, 0);
     assert.ok(rodarSql("SELECT COUNT(*) FROM auditoria WHERE acao = 'fotos_sem_uso_apagadas'").trim() !== '0');

@@ -181,7 +181,8 @@
 
     elementos.grade.innerHTML = produtosFiltrados.map(montarHtmlCartao).join('');
     elementos.grade.querySelectorAll('img[data-id]').forEach((elementoImagem, posicao) => {
-      componentes.aplicarFotoComReserva(elementoImagem, produtosFiltrados[posicao], TAMANHOS_FOTO_CARTAO);
+      // Com o filtro de cor ligado, o cartão já mostra a peça naquela cor
+      componentes.aplicarFotoComReserva(elementoImagem, produtosFiltrados[posicao], TAMANHOS_FOTO_CARTAO, filtrosAtivos.cor || '');
     });
   }
 
@@ -252,7 +253,7 @@
     escolhaAtual.tamanho = escolherPadrao(produto.tamanhos, filtrosAtivos.tamanho);
     escolhaAtual.cor = escolherPadrao(produto.cores, filtrosAtivos.cor);
 
-    componentes.aplicarFotoComReserva(elementos.detalheFoto, produto);
+    mostrarFotoDaCorEscolhida();
     elementos.detalheFoto.alt = produto.nome;
     elementos.detalheCategoria.textContent = produto.categoria;
     elementos.detalheNome.textContent = produto.nome;
@@ -301,9 +302,22 @@
   function escolherOpcao(evento, tipoOpcao) {
     const botao = evento.target.closest('.opcao');
     if (!botao) return;
+    const corAnterior = escolhaAtual.cor;
     escolhaAtual[tipoOpcao] = botao.dataset.valor;
     elementos.erro.classList.add('oculto');
+    if (escolhaAtual.cor !== corAnterior) mostrarFotoDaCorEscolhida();
     renderizarOpcoes();
+  }
+
+  /** Foto da janela de detalhe: a da cor escolhida (ou a principal, se a cor não tiver foto própria). */
+  function mostrarFotoDaCorEscolhida() {
+    const { produto, cor } = escolhaAtual;
+    const fotoNova = utilidades.escolherFotoDaCor(produto, cor);
+    // Só troca quando a foto muda de fato, para não piscar ao clicar em cores que usam a mesma foto
+    if (elementos.detalheFoto.dataset.fotoMostrada === fotoNova && elementos.detalheFoto.dataset.idProduto === produto.id) return;
+    elementos.detalheFoto.dataset.fotoMostrada = fotoNova;
+    elementos.detalheFoto.dataset.idProduto = produto.id;
+    componentes.aplicarFotoComReserva(elementos.detalheFoto, produto, '', cor || '');
   }
 
   function lerQuantidade() {

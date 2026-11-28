@@ -15,7 +15,7 @@
     <link rel="icon" href="img/marca/favicon.ico" sizes="any" />
     <link rel="icon" type="image/png" href="img/marca/favicon-32.png" sizes="32x32" />
     <link rel="apple-touch-icon" href="img/marca/apple-touch-icon.png" />
-    <link rel="stylesheet" href="css/estilos.css?v=19" />
+    <link rel="stylesheet" href="css/estilos.css?v=20" />
   </head>
   <body>
     <!-- Login (usuário e senha conferidos no servidor) -->
@@ -395,6 +395,13 @@
             <input type="text" id="produto-cores" placeholder="Verde Militar, Off White, Preto" />
           </div>
 
+          <div class="campo oculto" id="produto-bloco-fotos-cores">
+            <p class="rotulo-campo">Foto de cada cor (opcional)</p>
+            <p class="campo-ajuda">Na loja, ao clicar na cor, aparece a foto dela. A cor sem foto usa a foto principal.</p>
+            <p class="campo-ajuda oculto" id="produto-foto-cor-enviando">Enviando a foto...</p>
+            <div class="lista-fotos-cores" id="produto-fotos-cores"></div>
+          </div>
+
           <div class="campo">
             <div class="opcoes-checkbox">
               <label><input type="checkbox" id="produto-ativo" checked /> Produto ativo (visível na loja)</label>
@@ -566,18 +573,18 @@
     </dialog>
 
     <!-- Ordem importa: dados → lógica → telas → página -->
-    <script src="js/dados/dados-iniciais.js?v=19"></script>
-    <script src="js/logica/utilidades.js?v=19"></script>
-    <script src="js/logica/estoque.js?v=19"></script>
-    <script src="js/logica/contatos.js?v=19"></script>
-    <script src="js/logica/armazenamento.js?v=19"></script>
-    <script src="js/logica/api.js?v=19"></script>
-    <script src="js/logica/comprovante.js?v=19"></script>
-    <script src="js/logica/registro.js?v=19"></script>
-    <script src="js/logica/imagem.js?v=19"></script>
-    <script src="js/telas/componentes.js?v=19"></script>
-    <script src="js/vendor/qrcode-generator.js?v=19"></script>
-    <script src="js/telas/tela-admin.js?v=19"></script>
-    <script src="js/paginas/pagina-admin.js?v=19"></script>
+    <script src="js/dados/dados-iniciais.js?v=20"></script>
+    <script src="js/logica/utilidades.js?v=20"></script>
+    <script src="js/logica/estoque.js?v=20"></script>
+    <script src="js/logica/contatos.js?v=20"></script>
+    <script src="js/logica/armazenamento.js?v=20"></script>
+    <script src="js/logica/api.js?v=20"></script>
+    <script src="js/logica/comprovante.js?v=20"></script>
+    <script src="js/logica/registro.js?v=20"></script>
+    <script src="js/logica/imagem.js?v=20"></script>
+    <script src="js/telas/componentes.js?v=20"></script>
+    <script src="js/vendor/qrcode-generator.js?v=20"></script>
+    <script src="js/telas/tela-admin.js?v=20"></script>
+    <script src="js/paginas/pagina-admin.js?v=20"></script>
   </body>
 </html>

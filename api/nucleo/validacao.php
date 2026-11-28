@@ -78,6 +78,7 @@ function validarProduto(array $dados): array
     if (!fotoEhValida($foto)) {
         falhaDeValidacao('O endereço da foto é inválido. Use um link https.');
     }
+    $fotosPorCor = validarFotosPorCor($dados['fotosPorCor'] ?? [], $cores);
 
     return [
         'nome' => $nome,
@@ -85,12 +86,34 @@ function validarProduto(array $dados): array
         'categoria' => $categoria,
         'preco' => $preco,
         'foto' => $foto,
+        'fotosPorCor' => $fotosPorCor,
         'tamanhos' => $tamanhos,
         'cores' => $cores,
         'ativo' => ($dados['ativo'] ?? true) !== false,
         'controlaEstoque' => ($dados['controlaEstoque'] ?? false) === true,
         'alertaEstoque' => validarAlertaDeEstoque($dados['alertaEstoque'] ?? 3),
     ];
+}
+
+/**
+ * Foto de cada cor: só ficam as cores que o produto tem (cor apagada leva a foto junto) e fotos
+ * com endereço válido. A cor sem foto usa a foto principal.
+ */
+function validarFotosPorCor(mixed $fotosPorCor, array $cores): array
+{
+    $fotosValidas = [];
+    foreach (is_array($fotosPorCor) ? $fotosPorCor : [] as $cor => $foto) {
+        $corLimpa = str_replace('|', '/', textoLimpo((string) $cor, 40));
+        $fotoLimpa = textoLimpo($foto, 255);
+        if (!in_array($corLimpa, $cores, true) || $fotoLimpa === '') {
+            continue;
+        }
+        if (str_starts_with($fotoLimpa, 'data:') || !fotoEhValida($fotoLimpa)) {
+            falhaDeValidacao("A foto da cor {$corLimpa} é inválida. Envie de novo pelo botão.");
+        }
+        $fotosValidas[$corLimpa] = $fotoLimpa;
+    }
+    return $fotosValidas;
 }
 
 /** A partir de quantas peças o painel avisa que o estoque está baixo (0 = só quando zerar). */

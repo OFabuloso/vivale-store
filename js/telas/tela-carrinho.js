@@ -200,7 +200,7 @@
         cores: [item.cor],
         foto: '',
       };
-      componentes.aplicarFotoComReserva(elementoImagem, produto, TAMANHO_FOTO_ITEM);
+      componentes.aplicarFotoComReserva(elementoImagem, produto, TAMANHO_FOTO_ITEM, item.cor);
     });
   }
 

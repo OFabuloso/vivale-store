@@ -15,6 +15,8 @@
   const elementos = {};
   let idProdutoEmEdicao = null;
   let fotoAtual = '';
+  // Foto de cada cor no formulário aberto ({ "Pink": "fotos/...jpg" })
+  let fotosPorCorAtual = {};
   // Quantidades que o formulário mostrava ao abrir: o servidor usa para não gravar por cima de uma venda
   let estoqueVistoAoAbrir = {};
   // Quem está logado: o papel ("dono" ou "funcionario") decide o que aparece no painel
@@ -50,6 +52,18 @@
     elementos.campoAlertaEstoque = document.getElementById('produto-alerta-estoque');
     elementos.campoControlaEstoque.addEventListener('change', redesenharGradeDeEstoque);
     elementos.campoCores.addEventListener('input', redesenharGradeDeEstoque);
+    elementos.campoCores.addEventListener('input', redesenharFotosDasCores);
+    elementos.blocoFotosCores = document.getElementById('produto-bloco-fotos-cores');
+    elementos.listaFotosCores = document.getElementById('produto-fotos-cores');
+    elementos.listaFotosCores.addEventListener('change', (evento) => {
+      if (evento.target.matches('input[type="file"][data-cor]')) enviarFotoDaCor(evento.target);
+    });
+    elementos.listaFotosCores.addEventListener('click', (evento) => {
+      const botaoRemover = evento.target.closest('button[data-remover-foto-cor]');
+      if (!botaoRemover) return;
+      delete fotosPorCorAtual[botaoRemover.dataset.removerFotoCor];
+      redesenharFotosDasCores();
+    });
     document.getElementById('produto-tamanhos').addEventListener('change', redesenharGradeDeEstoque);
     elementos.janelaAlertasEstoque = document.getElementById('janela-alertas-estoque');
     componentes.configurarJanela(elementos.janelaAlertasEstoque);
@@ -430,6 +444,8 @@
     const fotoDoProduto = produto ? produto.foto : '';
     elementos.campoFotoUrl.value = fotoDoProduto.startsWith('data:') ? '' : fotoDoProduto;
     definirFoto(fotoDoProduto);
+    fotosPorCorAtual = produto ? { ...(produto.fotosPorCor || {}) } : {};
+    redesenharFotosDasCores();
 
     elementos.janelaProduto.showModal();
     elementos.campoNome.focus();
@@ -457,6 +473,55 @@
       definirFoto(await api.enviarFoto(fotoReduzida));
     } catch (erro) {
       elementos.campoFotoArquivo.value = '';
+      tratarErroDoServidor(erro, mostrarErroProduto);
+    } finally {
+      avisoEnviando.classList.add('oculto');
+      botaoSalvar.disabled = false;
+    }
+  }
+
+  /** Cores digitadas no formulário, sem repetir. */
+  function lerCoresDigitadas() {
+    return [...new Set(elementos.campoCores.value.split(',').map((cor) => cor.trim()).filter(Boolean))];
+  }
+
+  /** Uma linha por cor digitada, com a foto dela (se houver) e o botão para enviar ou trocar. */
+  function redesenharFotosDasCores() {
+    const cores = lerCoresDigitadas();
+    elementos.blocoFotosCores.classList.toggle('oculto', cores.length < 2 && !Object.keys(fotosPorCorAtual).length);
+    elementos.listaFotosCores.innerHTML = cores
+      .map((cor, posicao) => {
+        const foto = fotosPorCorAtual[cor] || '';
+        const idCampo = `produto-foto-cor-${posicao}`;
+        return `
+        <div class="linha-foto-cor">
+          ${foto ? `<img class="miniatura-foto-cor" src="${escaparHtml(foto)}" alt="" />` : '<span class="miniatura-foto-cor vazia">Principal</span>'}
+          <span class="nome-foto-cor"><span class="bolinha-cor" style="background:${utilidades.obterFundoDaCor(cor)}"></span>${escaparHtml(cor)}</span>
+          <label class="botao botao-contorno botao-pequeno" for="${idCampo}">${foto ? 'Trocar foto' : 'Foto desta cor'}</label>
+          <input class="oculto" type="file" id="${idCampo}" accept="image/jpeg,image/png,image/webp" data-cor="${escaparHtml(cor)}" />
+          ${foto ? `<button class="botao-texto" type="button" data-remover-foto-cor="${escaparHtml(cor)}">Remover</button>` : ''}
+        </div>`;
+      })
+      .join('');
+  }
+
+  /** Reduz a foto da cor, envia ao servidor e guarda o endereço definitivo para aquela cor. */
+  async function enviarFotoDaCor(campoArquivo) {
+    const arquivo = campoArquivo.files[0];
+    if (!arquivo) return;
+    const avisoEnviando = document.getElementById('produto-foto-cor-enviando');
+    const botaoSalvar = elementos.formularioProduto.querySelector('button[type="submit"]');
+    avisoEnviando.classList.remove('oculto');
+    botaoSalvar.disabled = true;
+    elementos.erroProduto.classList.add('oculto');
+    try {
+      const fotoReduzida = await imagem.reduzirParaEnvio(arquivo);
+      fotosPorCorAtual[campoArquivo.dataset.cor] = await api.enviarFoto(fotoReduzida);
+      // Produto sem foto principal: a primeira foto de cor também vira a principal (aparece no catálogo)
+      if (!fotoAtual) definirFoto(fotosPorCorAtual[campoArquivo.dataset.cor]);
+      redesenharFotosDasCores();
+    } catch (erro) {
+      campoArquivo.value = '';
       tratarErroDoServidor(erro, mostrarErroProduto);
     } finally {
       avisoEnviando.classList.add('oculto');
@@ -565,6 +630,8 @@
         categoria,
         preco: Math.round(preco * 100) / 100,
         foto: fotoAtual,
+        // Só as cores que continuam no produto levam a foto
+        fotosPorCor: Object.fromEntries(cores.filter((cor) => fotosPorCorAtual[cor]).map((cor) => [cor, fotosPorCorAtual[cor]])),
         tamanhos,
         cores,
         ativo: elementos.campoAtivo.checked,
@@ -938,7 +1005,10 @@
       if (cartao) escolherProdutoDaVenda(cartao.dataset.idProduto);
     });
     document.getElementById('venda-tamanho').addEventListener('change', mostrarDisponivelNaVenda);
-    document.getElementById('venda-cor').addEventListener('change', mostrarDisponivelNaVenda);
+    document.getElementById('venda-cor').addEventListener('change', () => {
+      mostrarFotoDaCorNaVenda();
+      mostrarDisponivelNaVenda();
+    });
     document.getElementById('botao-adicionar-item-venda').addEventListener('click', adicionarItemNaVenda);
     document.getElementById('itens-venda').addEventListener('click', (evento) => {
       const botaoRemover = evento.target.closest('[data-remover-item]');
@@ -1164,7 +1234,18 @@
       valores.map((valor) => `<option value="${escaparHtml(valor)}">${escaparHtml(rotular(valor))}</option>`).join('');
     document.getElementById('venda-tamanho').innerHTML = produto ? montarOpcoes(produto.tamanhos, utilidades.rotularTamanho) : '';
     document.getElementById('venda-cor').innerHTML = produto ? montarOpcoes(produto.cores, (cor) => cor) : '';
+    mostrarFotoDaCorNaVenda();
     mostrarDisponivelNaVenda();
+  }
+
+  /** O cartão da peça escolhida mostra a foto da cor marcada, para a vendedora conferir. */
+  function mostrarFotoDaCorNaVenda() {
+    const produto = produtoEscolhidoNaVenda();
+    if (!produto) return;
+    const cartao = [...document.querySelectorAll('#venda-grade-produtos [data-id-produto]')].find(
+      (elemento) => elemento.dataset.idProduto === produto.id,
+    );
+    if (cartao) componentes.aplicarFotoComReserva(cartao.querySelector('img'), produto, '110px', document.getElementById('venda-cor').value);
   }
 
   /** Quantas peças ainda podem ir nesta venda (estoque menos o que já está na lista). */
@@ -1222,7 +1303,7 @@
     document.querySelectorAll('#itens-venda .miniatura-item-venda').forEach((elementoImagem) => {
       const item = itensDaVendaNoBalcao[Number(elementoImagem.dataset.posicao)];
       const produto = armazenamento.obterProdutoPorId(item.idProduto) || { nome: item.nome, cores: [item.cor] };
-      componentes.aplicarFotoComReserva(elementoImagem, produto);
+      componentes.aplicarFotoComReserva(elementoImagem, produto, '', item.cor);
     });
     const total = itensDaVendaNoBalcao.reduce((soma, item) => soma + item.quantidade * item.preco, 0);
     document.getElementById('venda-total').textContent = formatarMoeda(total);

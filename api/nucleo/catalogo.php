@@ -16,12 +16,21 @@ function converterLinhaDeProduto(array $linha): array
         'categoria' => $linha['categoria'],
         'preco' => (float) $linha['preco'],
         'foto' => $linha['foto'],
+        // Como objeto, para o navegador receber {} e não [] quando estiver vazio
+        'fotosPorCor' => (object) lerFotosPorCor($linha['fotos_por_cor'] ?? null),
         'tamanhos' => json_decode($linha['tamanhos'], true) ?: [],
         'cores' => json_decode($linha['cores'], true) ?: [],
         'ativo' => (bool) $linha['ativo'],
         'controlaEstoque' => (bool) $linha['controla_estoque'],
         'alertaEstoque' => (int) $linha['alerta_estoque'],
     ];
+}
+
+/** Foto de cada cor (["Pink" => "fotos/...jpg"]); vazio quando todas as cores usam a foto principal. */
+function lerFotosPorCor(?string $json): array
+{
+    $fotosPorCor = $json === null ? [] : json_decode($json, true);
+    return is_array($fotosPorCor) ? $fotosPorCor : [];
 }
 
 /** Produtos com a grade de estoque de cada um ("estoque": [chave => quantidade]). */
@@ -56,6 +65,8 @@ function salvarProdutoNoBanco(?string $idProduto, array $produto): array
         $produto['categoria'],
         $produto['preco'],
         $produto['foto'],
+        // Como objeto, para o navegador receber {} e não [] quando não houver fotos por cor
+        json_encode((object) $produto['fotosPorCor'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
         json_encode($produto['tamanhos'], JSON_UNESCAPED_UNICODE),
         json_encode($produto['cores'], JSON_UNESCAPED_UNICODE),
         $produto['ativo'] ? 1 : 0,
@@ -65,7 +76,7 @@ function salvarProdutoNoBanco(?string $idProduto, array $produto): array
 
     if ($idProduto !== null && buscarProduto($idProduto) !== null) {
         executarConsulta(
-            'UPDATE produtos SET nome = ?, descricao = ?, categoria = ?, preco = ?, foto = ?,
+            'UPDATE produtos SET nome = ?, descricao = ?, categoria = ?, preco = ?, foto = ?, fotos_por_cor = ?,
              tamanhos = ?, cores = ?, ativo = ?, controla_estoque = ?, alerta_estoque = ? WHERE id = ?',
             [...$valores, $idProduto],
         );
@@ -73,8 +84,8 @@ function salvarProdutoNoBanco(?string $idProduto, array $produto): array
         $idProduto = $idProduto ?? gerarIdentificador('prd');
         $menorOrdem = (int) executarConsulta('SELECT COALESCE(MIN(ordem), 0) FROM produtos')->fetchColumn();
         executarConsulta(
-            'INSERT INTO produtos (nome, descricao, categoria, preco, foto, tamanhos, cores, ativo, controla_estoque, alerta_estoque, id, ordem)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            'INSERT INTO produtos (nome, descricao, categoria, preco, foto, fotos_por_cor, tamanhos, cores, ativo, controla_estoque, alerta_estoque, id, ordem)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
             [...$valores, $idProduto, $menorOrdem - 1],
         );
     }

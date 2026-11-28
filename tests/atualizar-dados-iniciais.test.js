@@ -6,7 +6,8 @@ const { montarArquivoDadosIniciais } = require('../ferramentas/atualizar-dados-i
 
 const catalogoDoServidor = {
   produtos: [
-    { id: 'prd-1', nome: 'Vestido', descricao: '', categoria: 'Vestidos', preco: 65, foto: 'fotos/abc.jpg', tamanhos: ['P'], cores: ['Azul'], ativo: true, esgotados: ['P|Azul'] },
+    { id: 'prd-1', nome: 'Vestido', descricao: '', categoria: 'Vestidos', preco: 65, foto: 'fotos/abc.jpg', fotosPorCor: {}, tamanhos: ['P'], cores: ['Azul'], ativo: true, esgotados: ['P|Azul'] },
+    { id: 'prd-2', nome: 'Corset', descricao: '', categoria: 'Corsets', preco: 80, foto: 'fotos/def.jpg', fotosPorCor: { Pink: 'fotos/ghi.jpg' }, tamanhos: ['U'], cores: ['Preto', 'Pink'], ativo: true, esgotados: [] },
   ],
   configuracao: { contatosWhatsApp: [{ id: 'contato-1', nome: 'Elaine', numero: '5521900000000', ativo: true }], valorMinimo: 200 },
 };
@@ -24,9 +25,12 @@ test('gera o catálogo de reserva com a versão seguinte, sem esgotados e sem ca
   assert.equal(dadosIniciais.versao, 6);
   assert.equal(dadosIniciais.configuracao.valorMinimo, 200);
   assert.deepEqual(dadosIniciais.configuracao.contatosWhatsApp, [{ id: 'contato-1', nome: 'Elaine', numero: '5521900000000' }]);
-  assert.equal(dadosIniciais.produtos.length, 1);
+  assert.equal(dadosIniciais.produtos.length, 2);
   assert.equal(dadosIniciais.produtos[0].esgotados, undefined);
   assert.equal(dadosIniciais.produtos[0].foto, 'fotos/abc.jpg');
+  // A foto de cada cor vai junto só quando existe
+  assert.equal(dadosIniciais.produtos[0].fotosPorCor, undefined);
+  assert.deepEqual(dadosIniciais.produtos[1].fotosPorCor, { Pink: 'fotos/ghi.jpg' });
 });
 
 test('catálogo vazio do servidor não apaga a reserva', () => {

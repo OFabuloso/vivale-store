@@ -129,6 +129,14 @@ function encontrarFotosSemUso(): array
     foreach (executarConsulta("SELECT foto FROM produtos WHERE foto LIKE 'fotos/%'")->fetchAll(PDO::FETCH_COLUMN) as $foto) {
         $fotosEmUso[basename($foto, '.jpg')] = true;
     }
+    // As fotos de cada cor também contam (inclusive de produtos inativos)
+    foreach (executarConsulta("SELECT fotos_por_cor FROM produtos WHERE fotos_por_cor LIKE '%fotos/%'")->fetchAll(PDO::FETCH_COLUMN) as $json) {
+        foreach (lerFotosPorCor($json) as $fotoDaCor) {
+            if (preg_match('#^fotos/([a-f0-9]{32})\.jpg$#', (string) $fotoDaCor, $encontrada) === 1) {
+                $fotosEmUso[$encontrada[1]] = true;
+            }
+        }
+    }
 
     $limiteDeIdade = time() - HORAS_ANTES_DE_CONTAR_COMO_SEM_USO * 3600;
     $arquivosPorFoto = [];

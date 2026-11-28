@@ -5,6 +5,7 @@ const {
   obterHexDaCor,
   obterFundoDaCor,
   montarSrcsetDaFoto,
+  escolherFotoDaCor,
   montarRotuloDoBotaoFiltrar,
   descreverSituacaoDoBackup,
   rotularTamanho,
@@ -59,6 +60,18 @@ test('botão de filtros mostra a quantidade de filtros ativos no painel', () => 
   assert.equal(montarRotuloDoBotaoFiltrar(0), 'Filtrar');
   assert.equal(montarRotuloDoBotaoFiltrar(1), 'Filtrar (1)');
   assert.equal(montarRotuloDoBotaoFiltrar(2), 'Filtrar (2)');
+});
+
+test('cada cor mostra a foto dela; a cor sem foto própria usa a foto principal', () => {
+  const produto = { foto: 'fotos/principal.jpg', fotosPorCor: { Pink: 'fotos/pink.jpg', Preto: '' } };
+  assert.equal(escolherFotoDaCor(produto, 'Pink'), 'fotos/pink.jpg');
+  assert.equal(escolherFotoDaCor(produto, 'Preto'), 'fotos/principal.jpg');
+  assert.equal(escolherFotoDaCor(produto, 'Azul'), 'fotos/principal.jpg');
+  assert.equal(escolherFotoDaCor(produto, null), 'fotos/principal.jpg');
+  assert.equal(escolherFotoDaCor(produto, 'constructor'), 'fotos/principal.jpg');
+  // Produto antigo, sem o campo das fotos por cor
+  assert.equal(escolherFotoDaCor({ foto: 'img/produtos/produto-01.jpeg' }, 'Pink'), 'img/produtos/produto-01.jpeg');
+  assert.equal(escolherFotoDaCor({ foto: '', fotosPorCor: {} }, 'Pink'), '');
 });
 
 test('foto de img/produtos gera o srcset com as versões otimizadas', () => {

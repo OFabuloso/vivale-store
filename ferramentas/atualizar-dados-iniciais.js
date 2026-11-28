@@ -39,13 +39,15 @@ function montarArquivoDadosIniciais(catalogo, versaoAnterior) {
       contatosWhatsApp: catalogo.configuracao.contatosWhatsApp.map(({ id, nome, numero }) => ({ id, nome, numero })),
       valorMinimo: catalogo.configuracao.valorMinimo,
     },
-    produtos: catalogo.produtos.map(({ id, nome, descricao, categoria, preco, foto, tamanhos, cores, ativo }) => ({
+    produtos: catalogo.produtos.map(({ id, nome, descricao, categoria, preco, foto, fotosPorCor, tamanhos, cores, ativo }) => ({
       id,
       nome,
       descricao,
       categoria,
       preco,
       foto,
+      // Só aparece quando alguma cor tem foto própria, para o arquivo não crescer à toa
+      ...(fotosPorCor && Object.keys(fotosPorCor).length ? { fotosPorCor } : {}),
       tamanhos,
       cores,
       ativo,

@@ -4,7 +4,7 @@
 (function (raiz) {
   'use strict';
 
-  const { gerarImagemPlaceholder, montarSrcsetDaFoto } = raiz.Loja.utilidades;
+  const { gerarImagemPlaceholder, montarSrcsetDaFoto, escolherFotoDaCor } = raiz.Loja.utilidades;
 
   let temporizadorToast = null;
 
@@ -22,18 +22,20 @@
     temporizadorToast = setTimeout(() => elementoToast.remove(), 2400);
   }
 
-  /** Retorna a foto do produto ou uma imagem ilustrativa quando não houver foto. */
-  function obterFotoProduto(produto) {
-    if (produto && produto.foto) return produto.foto;
-    return gerarImagemPlaceholder(produto ? produto.nome : '?', produto ? produto.cores[0] : '');
+  /** Retorna a foto do produto (ou da cor, se informada) ou uma imagem ilustrativa quando não houver foto. */
+  function obterFotoProduto(produto, cor = '') {
+    const foto = escolherFotoDaCor(produto, cor);
+    if (foto) return foto;
+    return gerarImagemPlaceholder(produto ? produto.nome : '?', cor || (produto ? produto.cores[0] : ''));
   }
 
   /**
    * Aplica a foto do produto. Com "tamanhosExibidos" (atributo "sizes"), usa as versões otimizadas.
    * Se elas faltarem, volta para a foto original; se esta também falhar, usa a imagem ilustrativa.
+   * Com "cor", mostra a foto daquela cor (ou a principal, se a cor não tiver foto própria).
    */
-  function aplicarFotoComReserva(elementoImagem, produto, tamanhosExibidos = '') {
-    const fotoOriginal = obterFotoProduto(produto);
+  function aplicarFotoComReserva(elementoImagem, produto, tamanhosExibidos = '', cor = '') {
+    const fotoOriginal = obterFotoProduto(produto, cor);
     const srcset = tamanhosExibidos ? montarSrcsetDaFoto(fotoOriginal) : '';
 
     elementoImagem.onerror = () => {
@@ -44,7 +46,7 @@
         return;
       }
       elementoImagem.onerror = null;
-      elementoImagem.src = gerarImagemPlaceholder(produto.nome, produto.cores[0]);
+      elementoImagem.src = gerarImagemPlaceholder(produto.nome, cor || produto.cores[0]);
     };
 
     // O "sizes" vem antes do "srcset" para o navegador já escolher a versão certa

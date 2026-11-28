@@ -182,6 +182,13 @@
     ).join(', ');
   }
 
+  /** Foto da cor escolhida; a cor sem foto própria (ou nenhuma cor) usa a foto principal. */
+  function escolherFotoDaCor(produto, cor) {
+    const fotosPorCor = (produto && produto.fotosPorCor) || {};
+    const fotoDaCor = cor && Object.prototype.hasOwnProperty.call(fotosPorCor, cor) ? fotosPorCor[cor] : '';
+    return fotoDaCor || (produto && produto.foto) || '';
+  }
+
   /** Texto do botão que abre os filtros, com a quantidade de filtros ativos dentro do painel. */
   function montarRotuloDoBotaoFiltrar(quantidadeDeFiltros) {
     return quantidadeDeFiltros > 0 ? `Filtrar (${quantidadeDeFiltros})` : 'Filtrar';
@@ -282,6 +289,7 @@
     obterFundoDaCor,
     LARGURAS_FOTO_OTIMIZADA,
     montarSrcsetDaFoto,
+    escolherFotoDaCor,
     montarRotuloDoBotaoFiltrar,
     gerarImagemPlaceholder,
     descreverSituacaoDoBackup,

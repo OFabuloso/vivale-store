@@ -1106,6 +1106,7 @@ button {
 }
 
 .campo label,
+.campo .rotulo-campo,
 .campo legend {
   display: block;
   margin-bottom: 6px;
@@ -2643,4 +2644,51 @@ fieldset.campo legend {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 8px;
   }
+}
+
+/* Cadastro do produto: foto de cada cor */
+.lista-fotos-cores {
+  display: grid;
+  gap: 8px;
+}
+
+.linha-foto-cor {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-foto);
+  background: var(--cor-campo);
+}
+
+.miniatura-foto-cor {
+  width: 42px;
+  height: 56px;
+  border-radius: 4px;
+  object-fit: cover;
+}
+
+.miniatura-foto-cor.vazia {
+  display: grid;
+  place-items: center;
+  border: 1px dashed var(--cor-borda);
+  color: var(--cor-texto-suave);
+  font-size: 9px;
+}
+
+.nome-foto-cor {
+  display: inline-flex;
+  flex: 1;
+  align-items: center;
+  gap: 6px;
+  min-width: 100px;
+  font-size: 14px;
+}
+
+.campo .linha-foto-cor label {
+  display: inline-flex;
+  margin: 0;
+  font-weight: 500;
 }
