@@ -65,6 +65,19 @@ test('o comprovante cabe em 32 colunas e traz número, itens, total, pagamento e
   assert.equal(linhas.find((linha) => linha.texto.startsWith('TOTAL')).negrito, true);
 });
 
+test('tamanho livre comprido quebra a linha e o valor desce para a última, sem passar de 32 colunas', () => {
+  const venda = {
+    ...vendaNoBalcao,
+    itens: [{ idProduto: 'prd-3', nome: 'Vestido', tamanho: 'Veste do 42 ao 49', cor: 'Preto e Branco', quantidade: 1, preco: 150 }],
+  };
+  const linhas = montarLinhasDoComprovante(venda).map((linha) => linha.texto);
+  const texto = linhas.join('\n');
+  assert.ok(linhas.every((linha) => linha.length <= LARGURA_COMPROVANTE), texto);
+  assert.match(texto, /^ {3}Veste do 42 ao 49 \/ Preto e$/m);
+  assert.match(texto, /^ {3}Branco$/m);
+  assert.match(texto, /^ +R\$ 150,00$/m);
+});
+
 test('pedido do site mostra o atendente na origem', () => {
   const texto = montarLinhasDoComprovante({ ...vendaNoBalcao, origem: 'site', atendente: 'Atendimento' }).map((linha) => linha.texto).join('\n');
   assert.match(texto, /^Origem: Site \(Atendimento\)$/m);

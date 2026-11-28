@@ -7,7 +7,10 @@ declare(strict_types=1);
 
 // 'U' = tamanho único: não pode vir junto com os outros
 const TAMANHO_UNICO = 'U';
+// Tamanhos de marcar no painel; além deles, o painel aceita tamanhos livres ("Veste até 42")
 const TAMANHOS_PERMITIDOS = ['P', 'M', 'G', 'GG', TAMANHO_UNICO];
+const LIMITE_DE_TAMANHOS = 12;
+const TAMANHO_MAXIMO_DO_TAMANHO = 30;
 const LIMITE_CONTATOS = 20;
 
 function textoLimpo(mixed $valor, int $tamanhoMaximo): string
@@ -39,7 +42,7 @@ function validarProduto(array $dados): array
     $preco = is_numeric($dados['preco'] ?? null) ? round((float) $dados['preco'], 2) : 0.0;
     $foto = textoLimpo($dados['foto'] ?? '', 255);
 
-    $tamanhos = array_values(array_intersect(TAMANHOS_PERMITIDOS, (array) ($dados['tamanhos'] ?? [])));
+    $tamanhos = validarTamanhos($dados['tamanhos'] ?? []);
     $cores = [];
     foreach ((array) ($dados['cores'] ?? []) as $cor) {
         // A barra vertical separa tamanho e cor na chave do estoque ("M|Azul")
@@ -64,7 +67,10 @@ function validarProduto(array $dados): array
         falhaDeValidacao('Selecione pelo menos um tamanho.');
     }
     if (in_array(TAMANHO_UNICO, $tamanhos, true) && count($tamanhos) > 1) {
-        falhaDeValidacao('Tamanho único não combina com P, M, G ou GG: escolha um ou outro.');
+        falhaDeValidacao('Tamanho único não combina com outros tamanhos: escolha um ou outro.');
+    }
+    if (count($tamanhos) > LIMITE_DE_TAMANHOS) {
+        falhaDeValidacao('Informe no máximo ' . LIMITE_DE_TAMANHOS . ' tamanhos.');
     }
     if ($cores === []) {
         falhaDeValidacao('Informe pelo menos uma cor.');
@@ -93,6 +99,27 @@ function validarProduto(array $dados): array
         'controlaEstoque' => ($dados['controlaEstoque'] ?? false) === true,
         'alertaEstoque' => validarAlertaDeEstoque($dados['alertaEstoque'] ?? 3),
     ];
+}
+
+/**
+ * Tamanhos do produto: primeiro os de marcar (P, M, G, GG, U), na ordem de sempre, depois os
+ * livres na ordem digitada. "p" digitado vira "P"; repetidos e vazios saem.
+ */
+function validarTamanhos(mixed $tamanhosRecebidos): array
+{
+    $marcados = [];
+    $livres = [];
+    foreach (is_array($tamanhosRecebidos) ? $tamanhosRecebidos : [] as $tamanho) {
+        // A barra vertical separa tamanho e cor na chave do estoque ("M|Azul")
+        $tamanhoLimpo = str_replace('|', '/', textoLimpo($tamanho, TAMANHO_MAXIMO_DO_TAMANHO));
+        $tamanhoPadrao = mb_strtoupper($tamanhoLimpo);
+        if (in_array($tamanhoPadrao, TAMANHOS_PERMITIDOS, true)) {
+            $marcados[$tamanhoPadrao] = true;
+        } elseif ($tamanhoLimpo !== '' && !in_array(mb_strtolower($tamanhoLimpo), array_map('mb_strtolower', $livres), true)) {
+            $livres[] = $tamanhoLimpo;
+        }
+    }
+    return [...array_values(array_filter(TAMANHOS_PERMITIDOS, fn (string $tamanho): bool => isset($marcados[$tamanho]))), ...$livres];
 }
 
 /**

@@ -76,6 +76,23 @@
   }
 
   /**
+   * "  M / Preto            R$ 130,90". Se tamanho e cor não couberem junto com o valor
+   * (ex.: "Veste do 42 ao 49 / Preto e Branco"), quebram em linhas e o valor vai para a última.
+   */
+  function montarLinhasDaVariacao(item) {
+    const variacao = `${RECUO_DOS_ITENS}${utilidades.rotularTamanho(item.tamanho)} / ${item.cor}`;
+    const valor = utilidades.formatarMoeda(item.quantidade * item.preco);
+    if (paraTextoDaImpressora(variacao).length + 1 + paraTextoDaImpressora(valor).length <= LARGURA_COMPROVANTE) {
+      return [linha(alinharNasPontas(variacao, valor))];
+    }
+    return [
+      // Todas as linhas com o recuo dos itens: quebra na largura que sobra depois dele
+      ...quebrarTexto(variacao.trimStart(), LARGURA_COMPROVANTE - RECUO_DOS_ITENS.length).map((texto) => linha(RECUO_DOS_ITENS + texto)),
+      linha(alinharNasPontas('', valor)),
+    ];
+  }
+
+  /**
    * Linhas do comprovante, cada uma com { texto, centralizada?, negrito?, grande? }.
    * As mesmas linhas servem para a impressora (ESC/POS) e para a pré-visualização na tela.
    */
@@ -84,12 +101,7 @@
     const origem = pedido.origem === 'site' ? `Site${pedido.atendente ? ` (${pedido.atendente})` : ''}` : 'Balcao';
     const linhasDosItens = pedido.itens.flatMap((item) => [
       ...quebrarTexto(`${item.quantidade}x ${item.nome}`, LARGURA_COMPROVANTE, RECUO_DOS_ITENS).map((texto) => linha(texto)),
-      linha(
-        alinharNasPontas(
-          `${RECUO_DOS_ITENS}${utilidades.rotularTamanho(item.tamanho)} / ${item.cor}`,
-          utilidades.formatarMoeda(item.quantidade * item.preco),
-        ),
-      ),
+      ...montarLinhasDaVariacao(item),
     ]);
 
     return [

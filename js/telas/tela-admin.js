@@ -44,6 +44,8 @@
     elementos.caixasTamanhos = document.querySelectorAll('#produto-tamanhos input[type="checkbox"]');
     elementos.caixaTamanhoUnico = document.getElementById('produto-tamanho-unico');
     elementos.caixaTamanhoUnico.addEventListener('change', aplicarTamanhoUnico);
+    elementos.campoTamanhosLivres = document.getElementById('produto-tamanhos-livres');
+    elementos.campoTamanhosLivres.addEventListener('input', redesenharGradeDeEstoque);
     elementos.campoCores = document.getElementById('produto-cores');
     elementos.campoAtivo = document.getElementById('produto-ativo');
     elementos.campoControlaEstoque = document.getElementById('produto-controla-estoque');
@@ -433,6 +435,10 @@
       // Produto novo começa com P, M, G e GG marcados
       caixa.checked = produto ? produto.tamanhos.includes(caixa.value) : caixa !== elementos.caixaTamanhoUnico;
     });
+    const tamanhosDeMarcar = [...elementos.caixasTamanhos].map((caixa) => caixa.value);
+    elementos.campoTamanhosLivres.value = produto
+      ? produto.tamanhos.filter((tamanho) => !tamanhosDeMarcar.includes(tamanho)).join(', ')
+      : '';
     aplicarTamanhoUnico();
 
     elementos.campoControlaEstoque.checked = Boolean(produto && produto.controlaEstoque);
@@ -478,6 +484,15 @@
       avisoEnviando.classList.add('oculto');
       botaoSalvar.disabled = false;
     }
+  }
+
+  /** Tamanhos marcados (P, M, G, GG, Único) seguidos dos digitados em "Outros tamanhos", sem repetir. */
+  function lerTamanhosEscolhidos() {
+    const marcados = [...elementos.caixasTamanhos].filter((caixa) => caixa.checked).map((caixa) => caixa.value);
+    const livres = elementos.campoTamanhosLivres.disabled
+      ? []
+      : elementos.campoTamanhosLivres.value.split(',').map((tamanho) => tamanho.trim()).filter(Boolean);
+    return [...new Set([...marcados, ...livres])];
   }
 
   /** Cores digitadas no formulário, sem repetir. */
@@ -551,7 +566,7 @@
     if (!controla) return;
 
     const quantidadesDigitadas = lerGradeDigitada();
-    const tamanhos = [...elementos.caixasTamanhos].filter((caixa) => caixa.checked).map((caixa) => caixa.value);
+    const tamanhos = lerTamanhosEscolhidos();
     const cores = [...new Set(elementos.campoCores.value.split(',').map((cor) => cor.trim()).filter(Boolean))];
     if (tamanhos.length === 0 || cores.length === 0) {
       elementos.gradeEstoque.innerHTML = '<p class="campo-ajuda">Escolha os tamanhos e as cores para preencher o estoque.</p>';
@@ -574,7 +589,7 @@
     elementos.gradeEstoque.innerHTML = `<table><thead><tr><th></th>${cabecalho}</tr></thead><tbody>${linhas}</tbody></table>`;
   }
 
-  /** Tamanho único marcado: desmarca e trava P, M, G e GG (a peça só tem um tamanho). */
+  /** Tamanho único marcado: desmarca e trava P, M, G, GG e os outros tamanhos (a peça só tem um tamanho). */
   function aplicarTamanhoUnico() {
     const ehTamanhoUnico = elementos.caixaTamanhoUnico.checked;
     elementos.caixasTamanhos.forEach((caixa) => {
@@ -582,6 +597,8 @@
       if (ehTamanhoUnico) caixa.checked = false;
       caixa.disabled = ehTamanhoUnico;
     });
+    if (ehTamanhoUnico) elementos.campoTamanhosLivres.value = '';
+    elementos.campoTamanhosLivres.disabled = ehTamanhoUnico;
   }
 
   function lerFormularioProduto() {
@@ -589,9 +606,7 @@
     const descricao = elementos.campoDescricao.value.trim();
     const categoria = elementos.campoCategoria.value.trim();
     const preco = lerValorMonetario(elementos.campoPreco.value);
-    const tamanhos = [...elementos.caixasTamanhos]
-      .filter((caixa) => caixa.checked)
-      .map((caixa) => caixa.value);
+    const tamanhos = lerTamanhosEscolhidos();
     const cores = [
       ...new Set(
         elementos.campoCores.value
@@ -605,6 +620,7 @@
     if (!categoria) return { erro: 'Informe a categoria.' };
     if (!Number.isFinite(preco) || preco <= 0) return { erro: 'Informe um preço válido (ex.: 65,00).' };
     if (tamanhos.length === 0) return { erro: 'Selecione pelo menos um tamanho.' };
+    if (tamanhos.some((tamanho) => tamanho.length > 30)) return { erro: 'Cada tamanho pode ter no máximo 30 letras.' };
     if (cores.length === 0) return { erro: 'Informe pelo menos uma cor.' };
 
     const controlaEstoque = elementos.campoControlaEstoque.checked;

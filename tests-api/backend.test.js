@@ -312,7 +312,7 @@ test('cria, edita, inativa e exclui um produto; a loja vê cada mudança na hora
   assert.equal(criado.status, 200);
   const { produto } = criado.dados;
   assert.match(produto.id, /^prd-/);
-  assert.deepEqual(produto.tamanhos, ['P']);
+  assert.deepEqual(produto.tamanhos, ['P', 'XXL']); // tamanho fora da lista de marcar entra como tamanho livre
   assert.deepEqual(produto.cores, ['Preto']);
   assert.equal(produto.descricao, '<b>leve</b>'); // guardado como texto; a tela escapa ao mostrar
   assert.equal((await produtoNaLoja(produto.id)).nome, 'Vestido de Teste');
@@ -341,6 +341,8 @@ test('produto inválido é recusado com a mensagem certa', async () => {
     [{ nome: 'Vestido', categoria: 'Vestidos', preco: 10, tamanhos: ['P'], cores: ['Preto'], foto: 'data:image/png;base64,AAAA' }, /foto/],
     [{ id: "x' OR 1=1 --", nome: 'Vestido', categoria: 'Vestidos', preco: 10, tamanhos: ['P'], cores: ['Preto'] }, /Identificador/],
     [{ nome: 'Vestido', categoria: 'Vestidos', preco: 10, tamanhos: ['U', 'M'], cores: ['Preto'] }, /Tamanho único não combina/],
+    [{ nome: 'Vestido', categoria: 'Vestidos', preco: 10, tamanhos: ['U', 'Veste até 42'], cores: ['Preto'] }, /Tamanho único não combina/],
+    [{ nome: 'Vestido', categoria: 'Vestidos', preco: 10, tamanhos: Array.from({ length: 13 }, (_, posicao) => `Numero ${posicao}`), cores: ['Preto'] }, /no máximo 12 tamanhos/],
   ];
   for (const [produto, mensagemEsperada] of casos) {
     const { status, dados } = await navegador.requisitar('api/admin/produtos.php', { metodo: 'POST', corpo: produto });
@@ -377,6 +379,47 @@ test('foto de cada cor: a loja recebe só as cores do produto; foto inválida é
     assert.match(invalida.dados.erro, /foto da cor Pink/);
   } finally {
     await navegador.requisitar(`api/admin/produtos.php?id=${encodeURIComponent(produto.id)}`, { metodo: 'DELETE' });
+  }
+});
+
+test('tamanho livre: salva na ordem certa, entra no estoque e é vendido no balcão', async () => {
+  const dono = criarNavegador();
+  await dono.entrar();
+  const tamanhoLongo = 'Veste do 42 ao 49';
+  const criado = await dono.requisitar('api/admin/produtos.php', {
+    metodo: 'POST',
+    corpo: {
+      nome: 'Vestido Tamanho Livre',
+      categoria: 'Vestidos',
+      preco: 150,
+      // "p" vira "P" e vem antes; o repetido (com outra caixa) e o vazio saem; a barra vertical vira "/"
+      tamanhos: [tamanhoLongo, 'p', 'veste do 42 AO 49', ' ', 'Veste até 42', 'A|B'],
+      cores: ['Preto'],
+      controlaEstoque: true,
+      alertaEstoque: 0,
+      estoque: { [`${tamanhoLongo}|Preto`]: 2, 'P|Preto': 1, 'Veste até 42|Preto': 0, 'A/B|Preto': 0 },
+      estoqueVisto: {},
+    },
+  });
+  assert.equal(criado.status, 200, JSON.stringify(criado.dados));
+  const { produto } = criado.dados;
+  try {
+    assert.deepEqual(produto.tamanhos, ['P', tamanhoLongo, 'Veste até 42', 'A/B']);
+    const naLoja = (await criarNavegador().requisitar('api/catalogo.php')).dados.produtos.find((item) => item.id === produto.id);
+    assert.deepEqual(naLoja.tamanhos, produto.tamanhos);
+    assert.ok(naLoja.esgotados.includes('Veste até 42|Preto'));
+
+    const venda = await dono.requisitar('api/admin/pedidos.php', {
+      metodo: 'POST',
+      corpo: { acao: 'balcao', itens: [{ idProduto: produto.id, tamanho: tamanhoLongo, cor: 'Preto', quantidade: 2 }], formaPagamento: 'pix' },
+    });
+    assert.equal(venda.status, 200, JSON.stringify(venda.dados));
+    assert.equal(venda.dados.pedido.itens[0].tamanho, tamanhoLongo);
+    const estoqueAgora = rodarSql(`SELECT quantidade FROM estoque WHERE produto_id = '${produto.id}' AND tamanho = '${tamanhoLongo}'`).trim();
+    assert.equal(estoqueAgora, '0');
+  } finally {
+    apagarPedidosDoProduto(produto.id);
+    await excluirProdutoDeTeste(dono, produto.id);
   }
 });
 
